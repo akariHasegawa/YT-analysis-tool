@@ -8,6 +8,8 @@ import { Sparkles, ArrowRight, PlayCircle } from "lucide-react"
 import { isLikelyYouTubeUrl } from "@/lib/youtube-video-id"
 import { DEFAULT_SAMPLE_SHORT_URLS } from "@/lib/default-sample-urls"
 
+type VideoType = "short" | "regular"
+
 interface UrlInputScreenProps {
   onAnalyze: (url: string) => void
 }
@@ -16,6 +18,7 @@ export function UrlInputScreen({ onAnalyze }: UrlInputScreenProps) {
   const { t } = useLanguage()
   const [url, setUrl] = useState("")
   const [error, setError] = useState("")
+  const [videoType, setVideoType] = useState<VideoType>("short")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,14 +68,45 @@ export function UrlInputScreen({ onAnalyze }: UrlInputScreenProps) {
         {/* Card */}
         <div className="bg-card rounded-2xl shadow-sm border border-border p-8">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {/* Video Type Toggle */}
             <div className="flex flex-col gap-2">
-              <label htmlFor="shorts-url" className="text-sm font-medium text-foreground">
+              <label className="text-sm font-medium text-foreground">
+                {t('input.videoType')}
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setVideoType("short")}
+                  className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-medium transition-colors ${
+                    videoType === "short"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  {t('input.videoType.short')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVideoType("regular")}
+                  className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-medium transition-colors ${
+                    videoType === "regular"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  {t('input.videoType.regular')}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="video-url" className="text-sm font-medium text-foreground">
                 {t('input.label')}
               </label>
               <div className="relative">
                 <PlayCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
-                  id="shorts-url"
+                  id="video-url"
                   type="url"
                   placeholder={t('input.placeholder')}
                   value={url}
