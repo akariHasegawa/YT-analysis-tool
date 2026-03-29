@@ -7,7 +7,10 @@
     "dev:fresh": "npx --yes kill-port 3000 && next dev -p 3000",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "print:retention": "npx --yes tsx scripts/print-retention-scenarios.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -69,6 +72,8 @@
     "postcss": "^8.5",
     "tailwindcss": "^4.2.0",
     "tw-animate-css": "1.3.3",
-    "typescript": "5.7.3"
+    "typescript": "5.7.3",
+    "vitest": "^3.2.4",
+    "tsx": "^4.19.4"
   }
 }

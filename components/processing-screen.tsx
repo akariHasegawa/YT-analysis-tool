@@ -2,7 +2,6 @@
 
 import { useEffect } from "react"
 import { useLanguage } from "@/lib/language-context"
-import { Loader2 } from "lucide-react"
 import type { VideoInfo } from "@/lib/video-info"
 import { emptyVideoInfo } from "@/lib/video-info"
 
@@ -68,20 +67,23 @@ export function ProcessingScreen({ url, onMetadataReady }: ProcessingScreenProps
   }, [url, onMetadataReady])
 
   return (
-    <main className="min-h-screen bg-background flex flex-col items-center justify-center px-4 pt-20">
-      <div className="w-full max-w-md">
-        <div className="flex justify-center mb-8">
-          <div className="relative flex items-center justify-center w-20 h-20 rounded-full bg-primary/10">
-            <Loader2 className="w-9 h-9 text-primary animate-spin" />
-          </div>
+    <main className="relative flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 pb-16 pt-8">
+      <div className="glass-card neon-card-glow w-full max-w-md rounded-2xl px-8 py-12 text-center sm:px-10 sm:py-14">
+        <div className="mx-auto mb-8 flex h-16 w-16 items-center justify-center rounded-2xl border border-[oklch(0.55_0.15_260_/_0.35)] bg-[oklch(0.2_0.06_270_/_0.5)] shadow-[0_0_24px_oklch(0.55_0.2_270_/_0.2)]">
+          <div
+            className="h-9 w-9 rounded-full border-2 border-[oklch(0.45_0.08_270_/_0.5)] border-t-[oklch(0.78_0.16_240)] border-r-[oklch(0.65_0.2_300)] animate-spin"
+            style={{ animationDuration: "0.9s" }}
+            aria-hidden
+          />
         </div>
 
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-foreground mb-1">{t("processing.fetchingMetadata")}</h2>
-          <p className="text-sm text-muted-foreground font-mono truncate max-w-xs mx-auto" title={url}>
-            {url}
-          </p>
-        </div>
+        <h2 className="text-lg font-semibold tracking-wide text-foreground sm:text-xl">{t("processing.fetchingMetadata")}</h2>
+        <p
+          className="mt-4 truncate font-mono text-xs text-muted-foreground sm:text-sm"
+          title={url}
+        >
+          {url}
+        </p>
       </div>
     </main>
   )

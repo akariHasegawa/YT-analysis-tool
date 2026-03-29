@@ -52,43 +52,55 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  /* ネオン・ダーク（濃紺〜紫〜青） */
+  --background: oklch(0.14 0.045 278);
+  --foreground: oklch(0.96 0.02 250);
+  --card: oklch(0.2 0.05 275 / 0.55);
+  --card-foreground: oklch(0.96 0.02 250);
+  --popover: oklch(0.18 0.06 280 / 0.92);
+  --popover-foreground: oklch(0.96 0.02 250);
+  --primary: oklch(0.72 0.19 245);
+  --primary-foreground: oklch(0.12 0.05 270);
+  --secondary: oklch(0.24 0.06 275 / 0.6);
+  --secondary-foreground: oklch(0.92 0.03 250);
+  --muted: oklch(0.26 0.05 275 / 0.45);
+  --muted-foreground: oklch(0.72 0.04 260);
+  --accent: oklch(0.62 0.22 300);
+  --accent-foreground: oklch(0.98 0.01 250);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.98 0.01 250);
+  --border: oklch(0.5 0.12 270 / 0.28);
+  --input: oklch(0.28 0.06 275 / 0.5);
+  --ring: oklch(0.65 0.18 250);
+  --chart-1: oklch(0.65 0.2 250);
+  --chart-2: oklch(0.6 0.22 300);
+  --chart-3: oklch(0.7 0.15 230);
+  --chart-4: oklch(0.55 0.2 280);
+  --chart-5: oklch(0.58 0.18 200);
+  --sidebar: oklch(0.16 0.05 280);
+  --sidebar-foreground: oklch(0.96 0.02 250);
+  --sidebar-primary: oklch(0.72 0.19 245);
+  --sidebar-primary-foreground: oklch(0.12 0.05 270);
+  --sidebar-accent: oklch(0.24 0.06 275);
+  --sidebar-accent-foreground: oklch(0.96 0.02 250);
+  --sidebar-border: oklch(0.5 0.12 270 / 0.25);
+  --sidebar-ring: oklch(0.65 0.18 250);
+  /* 分析カードバッジ（ダーク向け） */
+  --badge-hook: oklch(0.28 0.1 260 / 0.85);
+  --badge-hook-fg: oklch(0.82 0.14 245);
+  --badge-emotion: oklch(0.28 0.1 20 / 0.85);
+  --badge-emotion-fg: oklch(0.88 0.12 25);
+  --badge-structure: oklch(0.28 0.08 160 / 0.85);
+  --badge-structure-fg: oklch(0.82 0.12 165);
+  --badge-cta: oklch(0.3 0.1 85 / 0.85);
+  --badge-cta-fg: oklch(0.9 0.12 90);
+  --badge-retention: oklch(0.28 0.12 300 / 0.85);
+  --badge-retention-fg: oklch(0.85 0.14 305);
 }
 
 @theme inline {
-  --font-sans: 'Geist', 'Geist Fallback';
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-sans: var(--font-sans-jp), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -132,6 +144,92 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-transparent text-foreground antialiased;
   }
+}
+
+/* ページ背景（NeonBackground のベース層） */
+.neon-page-bg {
+  background-color: oklch(0.11 0.05 278);
+  background-image:
+    radial-gradient(ellipse 120% 70% at 50% -30%, oklch(0.32 0.14 285 / 0.5), transparent 55%),
+    radial-gradient(ellipse 80% 50% at 100% 20%, oklch(0.22 0.12 260 / 0.35), transparent 50%),
+    radial-gradient(ellipse 70% 45% at 0% 90%, oklch(0.24 0.1 300 / 0.28), transparent 45%),
+    linear-gradient(180deg, oklch(0.1 0.04 270) 0%, oklch(0.12 0.06 278) 45%, oklch(0.1 0.05 265) 100%);
+}
+
+.neon-grid {
+  background-image:
+    linear-gradient(oklch(0.75 0.12 260 / 0.35) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.75 0.12 260 / 0.35) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* ガラス風パネル */
+.glass-card {
+  background: linear-gradient(
+    145deg,
+    oklch(0.22 0.06 280 / 0.42) 0%,
+    oklch(0.16 0.08 270 / 0.35) 50%,
+    oklch(0.2 0.05 300 / 0.38) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid oklch(0.55 0.14 265 / 0.22);
+  box-shadow:
+    0 0 0 1px oklch(0.98 0.02 250 / 0.04) inset,
+    0 24px 48px oklch(0.05 0.05 280 / 0.45);
+}
+
+.neon-card-glow {
+  box-shadow:
+    0 0 60px oklch(0.5 0.18 270 / 0.12),
+    0 0 0 1px oklch(0.65 0.15 250 / 0.08) inset;
+}
+
+/* ヒーロー見出しグラデーション */
+.text-neon-hero {
+  background: linear-gradient(
+    105deg,
+    oklch(0.95 0.02 250) 0%,
+    oklch(0.88 0.1 260) 35%,
+    oklch(0.82 0.18 290) 70%,
+    oklch(0.9 0.12 240) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.text-neon-accent {
+  background: linear-gradient(120deg, oklch(0.85 0.2 250), oklch(0.75 0.22 300));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* プライマリボタン：ネオン glow + ホバー */
+.neon-button {
+  background: linear-gradient(135deg, oklch(0.58 0.2 250), oklch(0.5 0.22 285));
+  color: oklch(0.98 0.01 250);
+  box-shadow:
+    0 0 20px oklch(0.55 0.2 270 / 0.45),
+    0 0 40px oklch(0.45 0.15 280 / 0.2);
+  transition:
+    box-shadow 0.25s ease,
+    transform 0.2s ease,
+    filter 0.25s ease;
+}
+
+.neon-button:hover {
+  box-shadow:
+    0 0 28px oklch(0.65 0.2 260 / 0.55),
+    0 0 56px oklch(0.5 0.18 285 / 0.28);
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.neon-button:active {
+  transform: translateY(0);
+  filter: brightness(0.98);
 }

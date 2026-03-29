@@ -1,16 +1,21 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Noto_Sans_JP } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { LanguageProvider } from '@/lib/language-context'
 import { Header } from '@/components/header'
+import { NeonBackground } from '@/components/neon-background'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const notoSansJp = Noto_Sans_JP({
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-sans-jp',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
-  title: 'AI Shorts Analyzer',
-  description: 'Analyze the structure of YouTube Shorts videos using AI.',
+  title: 'YT Analysis — バズ構造分析',
+  description: 'YouTube動画の構造をAIで分析します。',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -37,9 +42,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className="font-sans antialiased">
+    <html lang="ja" className="dark">
+      <body className={`${notoSansJp.variable} font-sans min-h-screen antialiased`}>
         <LanguageProvider>
+          <NeonBackground />
           <Header />
           {children}
           <Analytics />
