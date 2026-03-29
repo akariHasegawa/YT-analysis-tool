@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { normalizeShortsAnalysis, shortsAnalysisSchema } from "@/lib/shorts-analysis"
-import { isLikelyYouTubeUrl } from "@/lib/youtube-video-id"
+import { extractYouTubeVideoId, isLikelyYouTubeUrl } from "@/lib/youtube-video-id"
+import { fetchYouTubeTranscriptLines } from "@/lib/youtube-transcript-lines"
+import {
+  emptyStructureTimelineFields,
+  inferStructureTimelineFromTranscript,
+} from "@/lib/structure-timeline"
 
 function detectPlatform(url: string): string {
   const u = url.toLowerCase()
@@ -10,6 +15,129 @@ function detectPlatform(url: string): string {
   if (u.includes("youtube.com") && u.includes("/shorts")) return "youtube_shorts"
   if (u.includes("youtu.be") && u.includes("/")) return "youtube_shorts"
   return "unknown"
+}
+
+/** GAS 保存用: 長さではなく URL に `/shorts/` が含まれるかで判定 */
+function detectVideoType(url: string): "shorts" | "long" {
+  return url.toLowerCase().includes("/shorts/") ? "shorts" : "long"
+}
+
+function mergeCookiesFromResponse(cookieJar: string, res: Response): string {
+  const h = res.headers as Headers & { getSetCookie?: () => string[] }
+  const list = typeof h.getSetCookie === "function" ? h.getSetCookie() : []
+  if (list.length === 0) return cookieJar
+
+  const map = new Map<string, string>()
+  for (const part of cookieJar.split(";").map((s) => s.trim()).filter(Boolean)) {
+    const eq = part.indexOf("=")
+    if (eq > 0) map.set(part.slice(0, eq), part.slice(eq + 1))
+  }
+  for (const line of list) {
+    const nv = line.split(";")[0]?.trim()
+    if (!nv || !nv.includes("=")) continue
+    const eq = nv.indexOf("=")
+    map.set(nv.slice(0, eq), nv.slice(eq + 1))
+  }
+  return [...map.entries()].map(([k, v]) => `${k}=${v}`).join("; ")
+}
+
+/**
+ * script.google.com の Web アプリは 302 で script.googleusercontent.com 等へ飛ばす。
+ * リダイレクト応答の Set-Cookie を次の POST に付けないと、405 や「ページが見つかりません」になることがある。
+ */
+async function postToGoogleAppsScriptWebhook(
+  execUrl: string,
+  jsonBody: string,
+  signal: AbortSignal
+): Promise<Response> {
+  const attempts: Array<{ label: string; headers: Record<string, string>; body: string }> = [
+    {
+      label: "json",
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+      body: jsonBody,
+    },
+    {
+      label: "textPlain",
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+      body: jsonBody,
+    },
+    {
+      label: "formData",
+      headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+      body: new URLSearchParams({ data: jsonBody }).toString(),
+    },
+  ]
+
+  const browserHeaders = {
+    Accept: "*/*",
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "X-Requested-With": "XMLHttpRequest",
+    Referer: "https://script.google.com/",
+  }
+
+  // 307/308 なら follow で POST が維持される環境向け
+  try {
+    const fr = await fetch(execUrl, {
+      method: "POST",
+      headers: { ...browserHeaders, "Content-Type": "application/json; charset=utf-8" },
+      body: jsonBody,
+      redirect: "follow",
+      signal,
+    })
+    const txt = await fr.text()
+    const bad = txt.includes("ページが見つかりません") || txt.includes("Script function not found")
+    const finalUrl = typeof (fr as { url?: string }).url === "string" ? (fr as { url: string }).url : ""
+    console.log("[GAS webhook] redirect:follow", fr.status, finalUrl.slice(0, 120), txt.slice(0, 80))
+    if (fr.ok && !bad) {
+      return new Response(txt, { status: fr.status, headers: fr.headers })
+    }
+  } catch (e) {
+    console.error("[GAS webhook] redirect:follow error", e)
+  }
+
+  let last: Response | null = null
+
+  for (const attempt of attempts) {
+    let currentUrl = execUrl
+    let cookieJar = ""
+    for (let hop = 0; hop < 8; hop++) {
+      const reqHeaders: Record<string, string> = { ...browserHeaders, ...attempt.headers }
+      if (cookieJar) reqHeaders.Cookie = cookieJar
+
+      const res = await fetch(currentUrl, {
+        method: "POST",
+        headers: reqHeaders,
+        body: attempt.body,
+        signal,
+        redirect: "manual",
+      })
+      last = res
+      cookieJar = mergeCookiesFromResponse(cookieJar, res)
+
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get("location")
+        if (!loc) {
+          console.error("GAS webhook redirect without Location", attempt.label, hop, res.status)
+          break
+        }
+        const nextUrl = new URL(loc, currentUrl).href
+        console.log("[GAS webhook] redirect", attempt.label, hop, res.status, "->", nextUrl.slice(0, 140))
+        currentUrl = nextUrl
+        continue
+      }
+
+      if (res.ok) {
+        return res
+      }
+
+      const peek = await res.clone().text()
+      console.error("GAS webhook attempt failed", attempt.label, hop, res.status, peek.slice(0, 200))
+      break
+    }
+  }
+
+  return last ?? new Response("GAS webhook: no response", { status: 599 })
 }
 
 const bodySchema = z.object({
@@ -129,18 +257,58 @@ export async function POST(req: NextRequest) {
   }
 
   const analysis = normalizeShortsAnalysis(analysisResult.data)
-  const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL
+
+  /** スプレッドシート保存用のみ。字幕→AI。失敗時は空文字のまま。 */
+  let timelineForSheet = emptyStructureTimelineFields()
+  try {
+    const vid = extractYouTubeVideoId(url)
+    if (vid) {
+      const transcript = await fetchYouTubeTranscriptLines(vid)
+      if (transcript?.trim()) {
+        timelineForSheet = await inferStructureTimelineFromTranscript({
+          apiKey,
+          model,
+          transcript,
+          title,
+          channelName,
+          durationSec: duration ?? null,
+        })
+      }
+    }
+  } catch {
+    timelineForSheet = emptyStructureTimelineFields()
+  }
+
+  const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL?.trim()
   if (webhookUrl) {
+    try {
+      const u = new URL(webhookUrl)
+      console.log("[GAS webhook] 送信先 pathname:", u.pathname)
+    } catch {
+      console.error("[GAS] GOOGLE_SHEETS_WEBHOOK_URL が有効な URL ではありません")
+    }
     const analyzedAt = new Date().toISOString()
+    const durationSec = duration ?? null
+    const videoType = detectVideoType(url)
+    /** スプレッドシート E/F 列用（URL の /shorts/ 判定。GAS の appendRow 列順に合わせて配置） */
+    const sheetColE_shorts = videoType === "shorts" ? "ショート動画" : ""
+    const sheetColF_regular = videoType === "long" ? "通常動画" : ""
+
     const payload = {
       analyzedAt,
       platform: detectPlatform(url),
+      videoType,
+      /** 別名: シート E 列向け */
+      sheetColE_shorts,
+      /** 別名: シート F 列向け */
+      sheetColF_regular,
       url,
       title,
       channelName,
       publishedAt: publishedAt ?? null,
       viewCount: viewCount ?? null,
-      duration: duration ?? null,
+      duration: durationSec,
+      durationSec,
       thumbnailUrl: thumbnailUrl ?? null,
       hookType: analysis.hook.value,
       emotionType: analysis.emotion.value,
@@ -150,20 +318,19 @@ export async function POST(req: NextRequest) {
       retentionPrediction: analysis.retention.value,
       improvementIdeas: analysis.improvementIdeas,
       nextVideoIdeas: analysis.nextVideoIdeas,
+      ...timelineForSheet,
     }
 
     const ac = new AbortController()
-    const timeoutId = setTimeout(() => ac.abort(), 15000)
+    const timeoutId = setTimeout(() => ac.abort(), 20000)
     try {
-      const webhookRes = await fetch(webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        signal: ac.signal,
-      })
+      const jsonBody = JSON.stringify(payload)
+      const webhookRes = await postToGoogleAppsScriptWebhook(webhookUrl, jsonBody, ac.signal)
+      const bodyText = await webhookRes.text()
       if (!webhookRes.ok) {
-        const errText = await webhookRes.text()
-        console.error("GAS webhook returned non-2xx", webhookRes.status, errText.slice(0, 300))
+        console.error("GAS webhook non-2xx", webhookRes.status, bodyText.slice(0, 400))
+      } else {
+        console.log("GAS webhook", webhookRes.status, bodyText.slice(0, 200))
       }
     } catch (e) {
       console.error("GAS webhook POST failed", e)
