@@ -14,11 +14,13 @@ import {
   BarChart2,
   Lightbulb,
   Film,
+  ImageIcon,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { VideoInfo } from "@/lib/video-info"
 import type { ShortsAnalysis } from "@/lib/shorts-analysis"
+import type { ReferenceInsightsPayload, SourceThumbnailInsight, EnrichedImprovementRow } from "@/lib/reference-insights"
 import {
   approximateTrendScoreFromViews,
   formatCompactCount,
@@ -32,6 +34,7 @@ interface ResultsScreenProps {
   analysis: ShortsAnalysis | null
   analysisError?: string
   analysisLoading: boolean
+  referenceInsights: ReferenceInsightsPayload | null
   onReset: () => void
 }
 
@@ -87,6 +90,7 @@ export function ResultsScreen({
   analysis,
   analysisError,
   analysisLoading,
+  referenceInsights,
   onReset,
 }: ResultsScreenProps) {
   const { t, language } = useLanguage()
@@ -225,9 +229,20 @@ export function ResultsScreen({
               ) : null}
             </section>
 
+            {analysis && referenceInsights?.sourceThumbnail ? (
+              <SourceThumbnailInsightCard insight={referenceInsights.sourceThumbnail} videoTitle={title} />
+            ) : null}
+
+            {analysis && referenceInsights && referenceInsights.enrichedImprovements.length > 0 ? (
+              <TaggedImprovementsSection rows={referenceInsights.enrichedImprovements} />
+            ) : null}
+
             {analysis ? (
               <section className="space-y-4">
                 <SectionLabel>{t("results.improvements")}</SectionLabel>
+                {referenceInsights?.sourceThumbnail ? (
+                  <p className="text-sm text-[oklch(0.7_0.08_260)]">{t("results.improvementsThumbNote")}</p>
+                ) : null}
                 <div className="glass-card neon-card-glow rounded-2xl p-6 sm:p-8">
                   <div className="mb-6 flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[oklch(0.3_0.1_270_/_0.6)] text-[oklch(0.78_0.16_250)]">
@@ -273,6 +288,7 @@ export function ResultsScreen({
                 </div>
               </section>
             ) : null}
+
           </>
         ) : null}
       </div>
@@ -296,5 +312,101 @@ function Stat({ icon: Icon, label, value }: { icon: React.ElementType; label: st
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="text-sm font-semibold text-foreground">{value}</span>
     </div>
+  )
+}
+
+function TaggedImprovementsSection({ rows }: { rows: EnrichedImprovementRow[] }) {
+  const { t } = useLanguage()
+  return (
+    <section className="space-y-4">
+      <SectionLabel>{t("results.taggedImprovementsTitle")}</SectionLabel>
+      <p className="text-sm text-muted-foreground">{t("results.taggedImprovementsHint")}</p>
+      <div className="glass-card neon-card-glow rounded-2xl p-6 sm:p-8">
+        <ul className="flex flex-col gap-3">
+          {rows.map((row, i) => (
+            <li
+              key={i}
+              className="flex flex-col gap-1 rounded-xl border border-[oklch(0.5_0.1_270_/_0.2)] bg-[oklch(0.14_0.05_280_/_0.4)] px-4 py-3 sm:flex-row sm:items-center sm:gap-4"
+            >
+              <span
+                className={cn(
+                  "inline-flex w-fit shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-wide",
+                  tagClassForImprovement(row.tag)
+                )}
+              >
+                {row.tag}
+              </span>
+              <span className="text-sm leading-relaxed text-foreground/95">{row.line}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  )
+}
+
+function tagClassForImprovement(tag: string): string {
+  if (tag === "フック改善") return "bg-[oklch(0.35_0.14_260_/_0.55)] text-[oklch(0.88_0.12_250)]"
+  if (tag === "サムネ改善") return "bg-[oklch(0.35_0.14_300_/_0.55)] text-[oklch(0.9_0.12_300)]"
+  if (tag === "テンポ改善") return "bg-[oklch(0.35_0.12_200_/_0.55)] text-[oklch(0.88_0.1_200)]"
+  if (tag === "オチ改善") return "bg-[oklch(0.35_0.12_40_/_0.55)] text-[oklch(0.9_0.1_85)]"
+  return "bg-[oklch(0.3_0.08_270_/_0.5)] text-muted-foreground"
+}
+
+function SourceThumbnailInsightCard({
+  insight,
+  videoTitle,
+}: {
+  insight: SourceThumbnailInsight
+  videoTitle: string
+}) {
+  const { t } = useLanguage()
+  return (
+    <section className="space-y-4 scroll-mt-24" id="source-thumbnail-insights" aria-labelledby="source-thumb-heading">
+      <SectionLabel>
+        <span id="source-thumb-heading">{t("results.sourceThumbTitle")}</span>
+      </SectionLabel>
+      <p className="text-sm text-muted-foreground">{t("results.sourceThumbHint")}</p>
+      <div className="glass-card neon-card-glow overflow-hidden rounded-2xl border-2 border-[oklch(0.55_0.14_280_/_0.45)] shadow-[0_0_28px_oklch(0.45_0.14_280_/_0.12)]">
+        <div className="flex flex-col gap-0 lg:flex-row">
+          <div className="relative aspect-video w-full flex-shrink-0 bg-[oklch(0.14_0.05_280)] lg:max-w-md">
+            <img
+              src={insight.thumbnailUrl}
+              alt={videoTitle}
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
+          </div>
+          <div className="flex flex-1 flex-col gap-5 p-6 sm:p-7">
+            <div>
+              <p className="mb-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-[oklch(0.75_0.12_260)]">
+                <ImageIcon className="h-4 w-4" />
+                {t("results.sourceThumbScore")}
+                <span className="rounded-md bg-[oklch(0.35_0.12_270_/_0.5)] px-2 py-0.5 text-[11px] text-[oklch(0.9_0.1_250)]">
+                  {insight.thumbnailScore}/5
+                </span>
+              </p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t("results.sourceThumbComment")}
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-foreground/95">{insight.thumbnailComment}</p>
+            </div>
+            <div className="rounded-xl border border-[oklch(0.55_0.12_300_/_0.25)] bg-[oklch(0.18_0.06_290_/_0.5)] p-4 sm:p-5">
+              <p className="mb-3 text-sm font-bold text-[oklch(0.88_0.12_280)]">{t("results.sourceThumbIdeas")}</p>
+              <ul className="flex flex-col gap-3">
+                {insight.improvementIdeas.map((line, i) => (
+                  <li key={i} className="flex gap-3 text-sm leading-relaxed">
+                    <span className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-[oklch(0.4_0.14_280_/_0.55)] text-xs font-bold text-[oklch(0.95_0.08_250)]">
+                      {i + 1}
+                    </span>
+                    <span className="pt-0.5 text-foreground/95">{line}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   )
 }

@@ -87,6 +87,16 @@ const translations: Record<Language, Record<string, string>> = {
     'results.idea4': '「誰も教えてくれない60秒バージョン」',
     'results.nextVideo': '次の動画を分析',
     'results.newAnalysis': '新しい分析',
+    'results.sourceThumbTitle': 'サムネ評価・改善案',
+    'results.sourceThumbHint':
+      '入力したURLのサムネ画像をAIが見てスコアと改善案を出しています（サムネが取得できたときだけ表示されます）。',
+    'results.sourceThumbScore': '総合スコア',
+    'results.sourceThumbComment': '評価コメント',
+    'results.sourceThumbIdeas': 'サムネ向けの改善案（ここを見る）',
+    'results.improvementsThumbNote':
+      '※ サムネ画像専用の改善案は、上の「サムネ評価・改善案」にあります（表示される場合のみ）。',
+    'results.taggedImprovementsTitle': '追加の改善ヒント（タグ付き）',
+    'results.taggedImprovementsHint': 'サムネ分析と同じ結果から、フック・テンポなどの観点も含めた提案です。',
     'header.language': '言語',
   },
   en: {
@@ -163,6 +173,16 @@ const translations: Record<Language, Record<string, string>> = {
     'results.idea4': '"The 60-second version nobody told you about"',
     'results.nextVideo': 'Analyze Next Video',
     'results.newAnalysis': 'New Analysis',
+    'results.sourceThumbTitle': 'Thumbnail review & fixes',
+    'results.sourceThumbHint':
+      'AI scores your thumbnail from the URL you entered and lists thumbnail-specific fixes (only when a thumbnail is available).',
+    'results.sourceThumbScore': 'Overall score',
+    'results.sourceThumbComment': 'Notes',
+    'results.sourceThumbIdeas': 'Thumbnail improvement ideas (see below)',
+    'results.improvementsThumbNote':
+      'Tip: Thumbnail-specific ideas appear in “Thumbnail review & fixes” above when available.',
+    'results.taggedImprovementsTitle': 'More suggestions (tagged)',
+    'results.taggedImprovementsHint': 'From the same pass as the thumbnail review, including hook and pacing.',
     'header.language': 'Language',
   },
 }

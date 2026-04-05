@@ -10,6 +10,82 @@ export const retentionDimensionsSchema = z.object({
   ctaNaturalness: z.coerce.number(),
 })
 
+const DEFAULT_RETENTION_DIMENSIONS = {
+  hookStrength: 3,
+  tempo: 3,
+  structureClarity: 3,
+  emotionalArc: 3,
+  payoffStrength: 3,
+  ctaNaturalness: 3,
+} as const
+
+function coerceNumber(v: unknown, fallback: number): number {
+  const n = typeof v === "number" ? v : Number(v)
+  return Number.isFinite(n) ? n : fallback
+}
+
+/**
+ * モデルがキー欠落・旧 retention 形式・型ゆれで返す場合に正規化してから zod 検証する。
+ */
+export function coerceAnalysisAiJson(raw: unknown): unknown {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+    return raw
+  }
+  const o = { ...(raw as Record<string, unknown>) }
+
+  const block = (key: string) => {
+    const v = o[key]
+    if (!v || typeof v !== "object" || Array.isArray(v)) {
+      return { value: "", description: "" }
+    }
+    const b = v as Record<string, unknown>
+    return {
+      value: typeof b.value === "string" ? b.value : String(b.value ?? ""),
+      description: typeof b.description === "string" ? b.description : String(b.description ?? ""),
+    }
+  }
+
+  o.hook = block("hook")
+  o.emotion = block("emotion")
+  o.cta = block("cta")
+  o.structure = block("structure")
+
+  let rd = o.retentionDimensions
+  if (!rd || typeof rd !== "object" || Array.isArray(rd)) {
+    o.retentionDimensions = { ...DEFAULT_RETENTION_DIMENSIONS }
+  } else {
+    const r = rd as Record<string, unknown>
+    o.retentionDimensions = {
+      hookStrength: coerceNumber(r.hookStrength, DEFAULT_RETENTION_DIMENSIONS.hookStrength),
+      tempo: coerceNumber(r.tempo, DEFAULT_RETENTION_DIMENSIONS.tempo),
+      structureClarity: coerceNumber(r.structureClarity, DEFAULT_RETENTION_DIMENSIONS.structureClarity),
+      emotionalArc: coerceNumber(r.emotionalArc, DEFAULT_RETENTION_DIMENSIONS.emotionalArc),
+      payoffStrength: coerceNumber(r.payoffStrength, DEFAULT_RETENTION_DIMENSIONS.payoffStrength),
+      ctaNaturalness: coerceNumber(r.ctaNaturalness, DEFAULT_RETENTION_DIMENSIONS.ctaNaturalness),
+    }
+  }
+
+  if (!Array.isArray(o.retentionReasons)) {
+    o.retentionReasons = []
+  } else {
+    o.retentionReasons = o.retentionReasons.map((x) => String(x ?? ""))
+  }
+
+  if (!Array.isArray(o.improvementIdeas)) {
+    o.improvementIdeas = []
+  } else {
+    o.improvementIdeas = o.improvementIdeas.map((x) => String(x ?? ""))
+  }
+
+  if (!Array.isArray(o.nextVideoIdeas)) {
+    o.nextVideoIdeas = []
+  } else {
+    o.nextVideoIdeas = o.nextVideoIdeas.map((x) => String(x ?? ""))
+  }
+
+  return o
+}
+
 /** OpenAI が返す JSON（視聴維持率は次元スコア＋理由2件のみ） */
 export const shortsAnalysisAiSchema = z.object({
   hook: z.object({

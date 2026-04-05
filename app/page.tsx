@@ -5,6 +5,7 @@ import { UrlInputScreen } from "@/components/url-input-screen"
 import { ProcessingScreen } from "@/components/processing-screen"
 import { ResultsScreen } from "@/components/results-screen"
 import type { ShortsAnalysis } from "@/lib/shorts-analysis"
+import type { ReferenceInsightsPayload } from "@/lib/reference-insights"
 import type { VideoInfo } from "@/lib/video-info"
 import { useLanguage } from "@/lib/language-context"
 
@@ -21,6 +22,7 @@ export default function Home() {
   const [analysis, setAnalysis] = useState<ShortsAnalysis | null>(null)
   const [analysisError, setAnalysisError] = useState<string | undefined>()
   const [analysisLoading, setAnalysisLoading] = useState(false)
+  const [referenceInsights, setReferenceInsights] = useState<ReferenceInsightsPayload | null>(null)
 
   const handleAnalyze = useCallback((url: string) => {
     setAnalyzedUrl(url)
@@ -29,6 +31,7 @@ export default function Home() {
     setAnalysis(null)
     setAnalysisError(undefined)
     setAnalysisLoading(false)
+    setReferenceInsights(null)
     setScreen("processing")
   }, [])
 
@@ -38,6 +41,7 @@ export default function Home() {
       setMetadataError(payload.metadataError)
       setAnalysis(null)
       setAnalysisError(undefined)
+      setReferenceInsights(null)
       setAnalysisLoading(!payload.metadataError)
       setScreen("results")
     },
@@ -52,6 +56,7 @@ export default function Home() {
     setAnalysis(null)
     setAnalysisError(undefined)
     setAnalysisLoading(false)
+    setReferenceInsights(null)
   }, [])
 
   useEffect(() => {
@@ -79,10 +84,15 @@ export default function Home() {
           }),
           signal: ac.signal,
         })
-        const data = (await res.json()) as { analysis?: ShortsAnalysis; error?: string }
+        const data = (await res.json()) as {
+          analysis?: ShortsAnalysis
+          referenceInsights?: ReferenceInsightsPayload
+          error?: string
+        }
         if (ac.signal.aborted) return
         if (!res.ok) {
           setAnalysis(null)
+          setReferenceInsights(null)
           setAnalysisError(
             typeof data.error === "string" ? data.error : tRef.current("processing.error.analyzeFailed")
           )
@@ -90,8 +100,15 @@ export default function Home() {
         }
         if (data.analysis) {
           setAnalysis(data.analysis)
+          setReferenceInsights(
+            data.referenceInsights ?? {
+              sourceThumbnail: null,
+              enrichedImprovements: [],
+            }
+          )
         } else {
           setAnalysis(null)
+          setReferenceInsights(null)
           setAnalysisError(tRef.current("processing.error.analyzeEmpty"))
         }
       } catch (e) {
@@ -119,6 +136,7 @@ export default function Home() {
         analysis={analysis}
         analysisError={analysisError}
         analysisLoading={analysisLoading}
+        referenceInsights={referenceInsights}
         onReset={handleReset}
       />
     )

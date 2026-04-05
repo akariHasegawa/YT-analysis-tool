@@ -35,12 +35,15 @@ describe("weightedAvgToBasePercent（中立基準）", () => {
 })
 
 describe("5アーキタイプのばらつき", () => {
-  const results = RETENTION_ARCHETYPE_FIXTURES.map((f) => ({
-    id: f.id,
-    title: f.title,
-    weightedAverage: weightedAverageScore(f.retentionDimensions),
-    ...computeRetentionPrediction(f.retentionDimensions, f.retentionReasons, f.seed),
-  }))
+  const results = RETENTION_ARCHETYPE_FIXTURES.map((f) => {
+    const pred = computeRetentionPrediction(f.retentionDimensions, f.retentionReasons, f.seed)
+    return {
+      id: f.id,
+      title: f.title,
+      inputWeightedAvg: weightedAverageScore(f.retentionDimensions),
+      ...pred,
+    }
+  })
 
   it("5件の retentionScore の幅が十分ある（>= 12pt）", () => {
     const scores = results.map((r) => r.retentionScore)
