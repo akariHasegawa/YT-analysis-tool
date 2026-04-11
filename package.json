@@ -2,6 +2,9 @@
   "name": "yt-analysis-tool",
   "version": "0.1.1",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev -p 3000",
     "dev:fresh": "npx --yes kill-port 3000 && next dev -p 3000",

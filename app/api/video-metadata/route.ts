@@ -51,7 +51,13 @@ export async function GET(req: NextRequest) {
   let durationSeconds: number | null = null
   let likeCount: number | null = null
 
-  const key = process.env.YOUTUBE_DATA_API_KEY
+  const key = process.env.YOUTUBE_DATA_API_KEY?.trim()
+  if (!key) {
+    console.warn(
+      "[video-metadata] YOUTUBE_DATA_API_KEY が未設定のため、再生回数・再生時間・いいねは取得しません（oEmbed のみ）。"
+    )
+  }
+
   if (key && videoId) {
     const qs = new URLSearchParams({
       part: "snippet,statistics,contentDetails",
@@ -59,6 +65,20 @@ export async function GET(req: NextRequest) {
       key,
     })
     const apiRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?${qs}`)
+    if (!apiRes.ok) {
+      let detail = ""
+      try {
+        detail = (await apiRes.text()).slice(0, 500)
+      } catch {
+        detail = "(body read failed)"
+      }
+      console.error(
+        "[video-metadata] YouTube Data API エラー:",
+        apiRes.status,
+        apiRes.statusText,
+        detail
+      )
+    }
     if (apiRes.ok) {
       const j = (await apiRes.json()) as {
         items?: Array<{
@@ -108,7 +128,12 @@ export async function GET(req: NextRequest) {
         if (dur) {
           const sec = parseIso8601DurationSeconds(dur)
           durationSeconds = sec !== null ? sec : null
+          if (sec === null) {
+            console.warn("[video-metadata] contentDetails.duration を秒に変換できませんでした:", dur)
+          }
         }
+      } else {
+        console.warn("[video-metadata] Data API は成功したが items が空です。videoId=", videoId)
       }
     }
   }

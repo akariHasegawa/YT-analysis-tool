@@ -67,6 +67,19 @@ function parseSecondsStrict(raw: string): number | null {
   return n
 }
 
+/**
+ * AI が字幕のミリ秒を秒と誤って転写した数値を救済する。
+ * 動画長が分かり、値が長さの数倍を超えるときは 1/1000 秒として解釈し直す。
+ */
+function maybeRescaleMisreadMilliseconds(n: number, durationSec: number | null): number {
+  if (!Number.isFinite(n) || n < 0) return n
+  if (durationSec != null && durationSec > 0 && n > durationSec * 4) {
+    const scaled = n / 1000
+    if (scaled <= durationSec + 30) return scaled
+  }
+  return n
+}
+
 function formatSecondsForStorage(n: number): string {
   const rounded = Math.round(n * 100) / 100
   if (Number.isInteger(rounded)) return String(rounded)
@@ -78,10 +91,12 @@ function cleanPair(
   endStr: string,
   durationSec: number | null
 ): [string, string] {
-  const s = parseSecondsStrict(startStr)
-  const e = parseSecondsStrict(endStr)
+  let s = parseSecondsStrict(startStr)
+  let e = parseSecondsStrict(endStr)
   if (s === null && e === null) return ["", ""]
   if (s === null || e === null) return ["", ""]
+  s = maybeRescaleMisreadMilliseconds(s, durationSec)
+  e = maybeRescaleMisreadMilliseconds(e, durationSec)
   if (s > e) return ["", ""]
   if (durationSec != null && Number.isFinite(durationSec) && durationSec >= 0) {
     if (s > durationSec || e > durationSec) return ["", ""]

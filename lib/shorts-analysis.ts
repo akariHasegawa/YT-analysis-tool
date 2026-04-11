@@ -83,6 +83,15 @@ export function coerceAnalysisAiJson(raw: unknown): unknown {
     o.nextVideoIdeas = o.nextVideoIdeas.map((x) => String(x ?? ""))
   }
 
+  for (const k of ["subjectType", "actionType", "sceneChangeLevel", "endingType"] as const) {
+    const v = o[k]
+    if (v == null || (typeof v === "string" && !v.trim())) {
+      o[k] = ""
+    } else {
+      o[k] = String(v).trim()
+    }
+  }
+
   return o
 }
 
@@ -108,6 +117,14 @@ export const shortsAnalysisAiSchema = z.object({
   retentionReasons: z.array(z.string()),
   improvementIdeas: z.array(z.string()),
   nextVideoIdeas: z.array(z.string()),
+  /** メイン被写体の推定タイプ（短いラベル） */
+  subjectType: z.string(),
+  /** 映像内の動き・行為の推定タイプ（短いラベル） */
+  actionType: z.string(),
+  /** カット・場面転換の多さ（例: 低 / 中 / 高 など短い表現） */
+  sceneChangeLevel: z.string(),
+  /** 締め方の型（短いラベル） */
+  endingType: z.string(),
 })
 
 export type ShortsAnalysisAi = z.infer<typeof shortsAnalysisAiSchema>
