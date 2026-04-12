@@ -11,6 +11,7 @@ import { fetchYouTubeTranscriptLines } from "@/lib/youtube-transcript-lines"
 import {
   emptyStructureTimelineFields,
   inferStructureTimelineFromTranscript,
+  structureTimelineFieldKeys,
 } from "@/lib/structure-timeline"
 import {
   buildReferenceInsights,
@@ -398,10 +399,29 @@ export async function POST(req: NextRequest) {
       sheetThumbnailImprovements,
     }
 
+    const timelinePayloadSlice = Object.fromEntries(
+      structureTimelineFieldKeys.map((k) => [k, (payload as Record<string, unknown>)[k]])
+    ) as Record<(typeof structureTimelineFieldKeys)[number], unknown>
+    const hasAnyTimelineSec = structureTimelineFieldKeys
+      .filter((k) => k.endsWith("Sec"))
+      .some((k) => {
+        const v = timelinePayloadSlice[k]
+        return typeof v === "string" && v.trim().length > 0
+      })
+    console.log("[GAS webhook] timeline fields in payload (hookStartSec 等):", timelinePayloadSlice)
+    console.log("[GAS webhook] timeline numeric fields non-empty?:", hasAnyTimelineSec)
+
+    const jsonBody = JSON.stringify(payload)
+    const maxLogChars = 16_000
+    if (jsonBody.length <= maxLogChars) {
+      console.log("[GAS webhook] full payload JSON:", jsonBody)
+    } else {
+      console.log("[GAS webhook] full payload JSON (truncated, length=" + jsonBody.length + "):", jsonBody.slice(0, maxLogChars) + "…")
+    }
+
     const ac = new AbortController()
     const timeoutId = setTimeout(() => ac.abort(), 20000)
     try {
-      const jsonBody = JSON.stringify(payload)
       const webhookRes = await postToGoogleAppsScriptWebhook(webhookUrl, jsonBody, ac.signal)
       const bodyText = await webhookRes.text()
       if (!webhookRes.ok) {
