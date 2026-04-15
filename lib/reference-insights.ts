@@ -1,6 +1,23 @@
 import { z } from "zod"
 import type { ShortsAnalysis } from "@/lib/shorts-analysis"
 
+function toMinSec(sec: number): string {
+  return `${Math.floor(sec / 60)}分${Math.round(sec % 60)}秒`
+}
+
+function convertSecondsInText(text: string): string {
+  // 「100.87s-104.40s」または「[100.87s-104.40s]」→「1分40秒-1分44秒」
+  let result = text.replace(
+    /\[?(\d+(?:\.\d+)?)\s*s\s*[-–~〜]\s*(\d+(?:\.\d+)?)\s*s\]?/g,
+    (_, a: string, b: string) => `${toMinSec(parseFloat(a))}-${toMinSec(parseFloat(b))}`
+  )
+  // 「9.52s」単体→「0分9秒」
+  result = result.replace(/(\d+(?:\.\d+)?)\s*s(?=[^\w]|$)/g, (_, n: string) => toMinSec(parseFloat(n)))
+  // 「27.80秒」→「0分27秒」（※「1分12秒」の12秒は変換しない）
+  result = result.replace(/(?<!分)(\d+(?:\.\d+)?)秒/g, (_, n: string) => toMinSec(parseFloat(n)))
+  return result
+}
+
 export const IMPROVEMENT_TAGS = ["フック改善", "サムネ改善", "テンポ改善", "オチ改善"] as const
 export type ImprovementTag = (typeof IMPROVEMENT_TAGS)[number]
 
@@ -25,7 +42,6 @@ export type ReferencePickContext = {
 
 export type ReferenceInsightsPayload = {
   sourceThumbnail: SourceThumbnailInsight | null
-  /** サムネ分析と同じVision呼び出しで付くタグ付き提案（サムネが無いときは空） */
   enrichedImprovements: EnrichedImprovementRow[]
 }
 
@@ -104,7 +120,7 @@ CTA: ${analysis.cta.value} / ${analysis.cta.description}`
 function buildTranscriptBlock(pickContext?: ReferencePickContext): string {
   const txRaw = pickContext?.transcriptExcerpt?.trim() ?? ""
   if (txRaw.length === 0) return ""
-  return `\n--- 字幕（抜粋。台本の流れ・オチの材料。URLから取得）---\n${txRaw.slice(0, TRANSCRIPT_MAX_CHARS)}\n`
+  return `\n--- 字幕（抜粋）---\n${txRaw.slice(0, TRANSCRIPT_MAX_CHARS)}\n`
 }
 
 function emptyPayload(): ReferenceInsightsPayload {
@@ -132,16 +148,11 @@ export function formatSheetImprovementLines(rows: EnrichedImprovementRow[]): str
   return rows.map((r) => `[${r.tag}] ${r.line}`).join("\n")
 }
 
-/** GAS / スプレッドシート AR 列向け。サムネが無いときは空文字。 */
 export function formatSheetThumbnailImprovements(source: SourceThumbnailInsight | null): string {
   if (source == null || !source.improvementIdeas.length) return ""
   return source.improvementIdeas.map((line, i) => `${i + 1}. ${line}`).join("\n")
 }
 
-/**
- * 入力動画サムネの Vision 評価＋サムネ向け改善案＋タグ付き追加提案。
- * サムネURLが取れない場合は空を返す。
- */
 export async function buildReferenceInsights(
   analysis: ShortsAnalysis,
   apiKey: string,
@@ -170,10 +181,19 @@ ${transcriptBlock}
 添付の1枚は、その動画のサムネイル画像です（分析対象）。
 
 タスク:
-1) sourceThumbnail: サムネイルを見て thumbnailScore（1〜5、5が最強）、thumbnailComment（1〜2文の評価）、improvementIdeas を2〜5件（**サムネ・クリック率・視認性**の具体案、日本語）。
-2) enrichedImprovements を2〜6件。tag は次のいずれかのみ: ${IMPROVEMENT_TAGS.join("、")}。動画全体の改善も含めよ。「サムネ改善」はサムネに直結する行を多めに。
+1) sourceThumbnail: サムネイルに実際に写っている要素（人物・テキスト・色・構図）を把握した上で評価する。
+   - thumbnailScore（1〜5、5が最強）
+   - thumbnailComment: 実際に見えている要素（人物の表情・テキストの内容・背景の色など）に言及した1〜2文
+   - improvementIdeas を2〜5件。「文字を大きく」「コントラストを強める」だけの汎用表現を禁止する。サムネに実際に写っている具体的な要素を名指
+しして改善案にすること（例：「右上の人物の表情が暗いため〜」「『ブチギレ』の文字が背景に埋もれているため〜」）。
 
-必ず JSON のみ。1オブジェクト。キー: sourceThumbnail（thumbnailScore, thumbnailComment, improvementIdeas配列）、enrichedImprovements（tag と line）。`
+2) enrichedImprovements を2〜6件。tag は次のいずれかのみ: ${IMPROVEMENT_TAGS.join("、")}。
+   - 「フックを強化する」「テンポを上げる」などの汎用表現のみで終わらせることを禁止する
+   - 字幕がある場合は具体的な秒数や発言内容を引用すること
+   - この動画のタイトル・内容に固有の改善案にすること
+
+必ず JSON のみ。1オブジェクト。キー: sourceThumbnail（thumbnailScore, thumbnailComment, improvementIdeas配列）、enrichedImprovements（tag と
+line）。`
 
   let res: Response
   try {
@@ -230,7 +250,7 @@ ${transcriptBlock}
     .map((r) => {
       const tag = normalizeTag(r.tag)
       if (!tag) return null
-      return { tag, line: r.line.trim() }
+      return { tag, line: convertSecondsInText(r.line.trim()) }
     })
     .filter(Boolean) as EnrichedImprovementRow[]
 

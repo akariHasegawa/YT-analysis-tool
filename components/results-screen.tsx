@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useLanguage } from "@/lib/language-context"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,6 +16,10 @@ import {
   Lightbulb,
   Film,
   ImageIcon,
+  FileText,
+  Video,
+  Copy,
+  Check,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -95,6 +100,83 @@ export function ResultsScreen({
 }: ResultsScreenProps) {
   const { t, language } = useLanguage()
   const locale = language === "ja" ? "ja-JP" : "en-US"
+
+  type PromptState = {
+    loading: "script" | "video" | null
+    scriptPrompt: string | null
+    videoPrompt: string | null
+    open: "script" | "video" | null
+    copied: boolean
+  }
+  const [promptStates, setPromptStates] = useState<Record<number, PromptState>>({})
+
+  const getPromptState = (i: number): PromptState =>
+    promptStates[i] ?? { loading: null, scriptPrompt: null, videoPrompt: null, open: null, copied: false }
+
+  const generatePrompt = async (i: number, promptType: "script" | "video") => {
+    if (!analysis) return
+    const state = getPromptState(i)
+    const cached = promptType === "script" ? state.scriptPrompt : state.videoPrompt
+    if (cached) {
+      setPromptStates((prev) => ({
+        ...prev,
+        [i]: { ...getPromptState(i), open: promptType, copied: false },
+      }))
+      return
+    }
+    setPromptStates((prev) => ({
+      ...prev,
+      [i]: { ...getPromptState(i), loading: promptType, open: null },
+    }))
+    try {
+      const res = await fetch("/api/generate-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idea: analysis.nextVideoIdeas[i],
+          promptType,
+          context: {
+            channelName,
+            hook: analysis.hook.value,
+            emotion: analysis.emotion.value,
+            subjectType: analysis.subjectType,
+            actionType: analysis.actionType,
+            improvementIdeas: analysis.improvementIdeas,
+          },
+        }),
+      })
+      const data = (await res.json()) as { prompt?: string; error?: string }
+      if (!res.ok || !data.prompt) throw new Error(data.error ?? "生成失敗")
+      setPromptStates((prev) => ({
+        ...prev,
+        [i]: {
+          ...getPromptState(i),
+          loading: null,
+          scriptPrompt: promptType === "script" ? data.prompt! : getPromptState(i).scriptPrompt,
+          videoPrompt: promptType === "video" ? data.prompt! : getPromptState(i).videoPrompt,
+          open: promptType,
+          copied: false,
+        },
+      }))
+    } catch {
+      setPromptStates((prev) => ({
+        ...prev,
+        [i]: { ...getPromptState(i), loading: null },
+      }))
+    }
+  }
+
+  const copyPrompt = (i: number) => {
+    const state = getPromptState(i)
+    const text = state.open === "script" ? state.scriptPrompt : state.videoPrompt
+    if (!text) return
+    navigator.clipboard.writeText(text).then(() => {
+      setPromptStates((prev) => ({ ...prev, [i]: { ...getPromptState(i), copied: true } }))
+      setTimeout(() => {
+        setPromptStates((prev) => ({ ...prev, [i]: { ...getPromptState(i), copied: false } }))
+      }, 2000)
+    })
+  }
 
   const title = (videoInfo?.title ?? "").trim() || t("results.titleUnknown")
   const channelName = (videoInfo?.channelName ?? "").trim() || t("results.channelUnknown")
@@ -274,16 +356,74 @@ export function ResultsScreen({
                     </div>
                     <h3 className="text-base font-semibold text-foreground sm:text-lg">{t("results.ideasTitle")}</h3>
                   </div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-                    {analysis.nextVideoIdeas.map((text, i) => (
-                      <div
-                        key={i}
-                        className="flex items-start gap-3 rounded-xl border border-[oklch(0.5_0.1_270_/_0.2)] bg-[oklch(0.16_0.05_280_/_0.35)] px-4 py-4 transition-all hover:border-[oklch(0.6_0.14_260_/_0.35)] hover:bg-[oklch(0.22_0.08_280_/_0.4)]"
-                      >
-                        <span className="pt-0.5 text-lg font-bold leading-none text-[oklch(0.72_0.18_250)]">→</span>
-                        <span className="text-sm leading-relaxed text-foreground/95">{text}</span>
-                      </div>
-                    ))}
+                  <div className="grid grid-cols-1 gap-4">
+                    {analysis.nextVideoIdeas.map((text, i) => {
+                      const ps = getPromptState(i)
+                      const activePrompt = ps.open === "script" ? ps.scriptPrompt : ps.videoPrompt
+                      return (
+                        <div key={i} className="rounded-xl border border-[oklch(0.5_0.1_270_/_0.2)] bg-[oklch(0.16_0.05_280_/_0.35)] overflow-hidden">
+                          {/* アイデアテキスト */}
+                          <div className="flex items-start gap-3 px-4 py-4">
+                            <span className="pt-0.5 text-lg font-bold leading-none text-[oklch(0.72_0.18_250)]">→</span>
+                            <span className="text-sm leading-relaxed text-foreground/95">{text}</span>
+                          </div>
+                          {/* ボタン */}
+                          <div className="flex gap-2 px-4 pb-4">
+                            <button
+                              type="button"
+                              onClick={() => generatePrompt(i, "script")}
+                              disabled={ps.loading !== null}
+                              className={cn(
+                                "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
+                                ps.open === "script"
+                                  ? "bg-[oklch(0.45_0.18_250)] text-white"
+                                  : "bg-[oklch(0.25_0.08_270_/_0.6)] text-[oklch(0.78_0.12_260)] hover:bg-[oklch(0.35_0.12_260_/_0.7)]",
+                                ps.loading === "script" && "opacity-60 cursor-not-allowed"
+                              )}
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                              {ps.loading === "script" ? "生成中..." : "台本プロンプト"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => generatePrompt(i, "video")}
+                              disabled={ps.loading !== null}
+                              className={cn(
+                                "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
+                                ps.open === "video"
+                                  ? "bg-[oklch(0.45_0.18_300)] text-white"
+                                  : "bg-[oklch(0.25_0.08_270_/_0.6)] text-[oklch(0.78_0.12_260)] hover:bg-[oklch(0.35_0.12_260_/_0.7)]",
+                                ps.loading === "video" && "opacity-60 cursor-not-allowed"
+                              )}
+                            >
+                              <Video className="h-3.5 w-3.5" />
+                              {ps.loading === "video" ? "生成中..." : "動画プロンプト"}
+                            </button>
+                          </div>
+                          {/* 生成されたプロンプト表示 */}
+                          {ps.open && activePrompt && (
+                            <div className="border-t border-[oklch(0.5_0.1_270_/_0.15)] mx-0">
+                              <div className="flex items-center justify-between px-4 py-2 bg-[oklch(0.12_0.04_280_/_0.5)]">
+                                <span className="text-xs font-semibold text-[oklch(0.65_0.1_270)]">
+                                  {ps.open === "script" ? "台本プロンプト" : "動画生成プロンプト"}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => copyPrompt(i)}
+                                  className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[oklch(0.72_0.12_260)] transition-colors hover:bg-[oklch(0.3_0.08_270_/_0.4)]"
+                                >
+                                  {ps.copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+                                  {ps.copied ? "コピー済み" : "コピー"}
+                                </button>
+                              </div>
+                              <pre className="whitespace-pre-wrap px-4 py-3 text-xs leading-relaxed text-foreground/80 font-sans max-h-64 overflow-y-auto">
+                                {activePrompt}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               </section>

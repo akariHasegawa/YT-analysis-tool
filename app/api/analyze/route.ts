@@ -1,440 +1,451 @@
 import { NextRequest, NextResponse } from "next/server"
-import { z } from "zod"
-import {
-  coerceAnalysisAiJson,
-  finalizeShortsAnalysisFromAi,
-  normalizeShortsAnalysis,
-  shortsAnalysisAiSchema,
-} from "@/lib/shorts-analysis"
-import { extractYouTubeVideoId, isLikelyYouTubeUrl } from "@/lib/youtube-video-id"
-import { fetchYouTubeTranscriptLines } from "@/lib/youtube-transcript-lines"
-import {
-  emptyStructureTimelineFields,
-  inferStructureTimelineFromTranscript,
-  structureTimelineFieldKeys,
-} from "@/lib/structure-timeline"
-import {
-  buildReferenceInsights,
-  formatSheetImprovementLines,
-  formatSheetImprovementTags,
-  formatSheetThumbnailImprovements,
-} from "@/lib/reference-insights"
+  import { z } from "zod"
+  import {
+    coerceAnalysisAiJson,
+    finalizeShortsAnalysisFromAi,
+    normalizeShortsAnalysis,
+    shortsAnalysisAiSchema,
+  } from "@/lib/shorts-analysis"
+  import { extractYouTubeVideoId, isLikelyYouTubeUrl } from "@/lib/youtube-video-id"
+  import { fetchYouTubeTranscriptLines } from "@/lib/youtube-transcript-lines"
+  import {
+    emptyStructureTimelineFields,
+    inferStructureTimelineFromTranscript,
+    structureTimelineFieldKeys,
+  } from "@/lib/structure-timeline"
+  import {
+    buildReferenceInsights,
+    formatSheetImprovementLines,
+    formatSheetImprovementTags,
+    formatSheetThumbnailImprovements,
+  } from "@/lib/reference-insights"
 
-function detectPlatform(url: string): string {
-  const u = url.toLowerCase()
-  if (u.includes("tiktok.com")) return "tiktok"
-  if (u.includes("instagram.com") && (u.includes("/reels") || u.includes("reels"))) return "instagram_reels"
-  if (u.includes("youtube.com") && u.includes("/shorts")) return "youtube_shorts"
-  if (u.includes("youtu.be") && u.includes("/")) return "youtube_shorts"
-  return "unknown"
-}
-
-/** GAS 保存用: 長さではなく URL に `/shorts/` が含まれるかで判定 */
-function detectVideoType(url: string): "shorts" | "long" {
-  return url.toLowerCase().includes("/shorts/") ? "shorts" : "long"
-}
-
-function mergeCookiesFromResponse(cookieJar: string, res: Response): string {
-  const h = res.headers as Headers & { getSetCookie?: () => string[] }
-  const list = typeof h.getSetCookie === "function" ? h.getSetCookie() : []
-  if (list.length === 0) return cookieJar
-
-  const map = new Map<string, string>()
-  for (const part of cookieJar.split(";").map((s) => s.trim()).filter(Boolean)) {
-    const eq = part.indexOf("=")
-    if (eq > 0) map.set(part.slice(0, eq), part.slice(eq + 1))
-  }
-  for (const line of list) {
-    const nv = line.split(";")[0]?.trim()
-    if (!nv || !nv.includes("=")) continue
-    const eq = nv.indexOf("=")
-    map.set(nv.slice(0, eq), nv.slice(eq + 1))
-  }
-  return [...map.entries()].map(([k, v]) => `${k}=${v}`).join("; ")
-}
-
-/**
- * script.google.com の Web アプリは 302 で script.googleusercontent.com 等へ飛ばす。
- * リダイレクト応答の Set-Cookie を次の POST に付けないと、405 や「ページが見つかりません」になることがある。
- */
-async function postToGoogleAppsScriptWebhook(
-  execUrl: string,
-  jsonBody: string,
-  signal: AbortSignal
-): Promise<Response> {
-  const attempts: Array<{ label: string; headers: Record<string, string>; body: string }> = [
-    {
-      label: "json",
-      headers: { "Content-Type": "application/json; charset=utf-8" },
-      body: jsonBody,
-    },
-    {
-      label: "textPlain",
-      headers: { "Content-Type": "text/plain; charset=utf-8" },
-      body: jsonBody,
-    },
-    {
-      label: "formData",
-      headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
-      body: new URLSearchParams({ data: jsonBody }).toString(),
-    },
-  ]
-
-  const browserHeaders = {
-    Accept: "*/*",
-    "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    "X-Requested-With": "XMLHttpRequest",
-    Referer: "https://script.google.com/",
+  function detectPlatform(url: string): string {
+    const u = url.toLowerCase()
+    if (u.includes("tiktok.com")) return "tiktok"
+    if (u.includes("instagram.com") && (u.includes("/reels") || u.includes("reels"))) return "instagram_reels"
+    if (u.includes("youtube.com") && u.includes("/shorts")) return "youtube_shorts"
+    if (u.includes("youtu.be") && u.includes("/")) return "youtube_shorts"
+    return "unknown"
   }
 
-  // 307/308 なら follow で POST が維持される環境向け
-  try {
-    const fr = await fetch(execUrl, {
-      method: "POST",
-      headers: { ...browserHeaders, "Content-Type": "application/json; charset=utf-8" },
-      body: jsonBody,
-      redirect: "follow",
-      signal,
-    })
-    const txt = await fr.text()
-    const bad = txt.includes("ページが見つかりません") || txt.includes("Script function not found")
-    const finalUrl = typeof (fr as { url?: string }).url === "string" ? (fr as { url: string }).url : ""
-    console.log("[GAS webhook] redirect:follow", fr.status, finalUrl.slice(0, 120), txt.slice(0, 80))
-    if (fr.ok && !bad) {
-      return new Response(txt, { status: fr.status, headers: fr.headers })
+  function detectVideoType(url: string): "shorts" | "long" {
+    return url.toLowerCase().includes("/shorts/") ? "shorts" : "long"
+  }
+
+  function mergeCookiesFromResponse(cookieJar: string, res: Response): string {
+    const h = res.headers as Headers & { getSetCookie?: () => string[] }
+    const list = typeof h.getSetCookie === "function" ? h.getSetCookie() : []
+    if (list.length === 0) return cookieJar
+
+    const map = new Map<string, string>()
+    for (const part of cookieJar.split(";").map((s) => s.trim()).filter(Boolean)) {
+      const eq = part.indexOf("=")
+      if (eq > 0) map.set(part.slice(0, eq), part.slice(eq + 1))
     }
-  } catch (e) {
-    console.error("[GAS webhook] redirect:follow error", e)
-  }
-
-  let last: Response | null = null
-
-  for (const attempt of attempts) {
-    let currentUrl = execUrl
-    let cookieJar = ""
-    for (let hop = 0; hop < 8; hop++) {
-      const reqHeaders: Record<string, string> = { ...browserHeaders, ...attempt.headers }
-      if (cookieJar) reqHeaders.Cookie = cookieJar
-
-      const res = await fetch(currentUrl, {
-        method: "POST",
-        headers: reqHeaders,
-        body: attempt.body,
-        signal,
-        redirect: "manual",
-      })
-      last = res
-      cookieJar = mergeCookiesFromResponse(cookieJar, res)
-
-      if (res.status >= 300 && res.status < 400) {
-        const loc = res.headers.get("location")
-        if (!loc) {
-          console.error("GAS webhook redirect without Location", attempt.label, hop, res.status)
-          break
-        }
-        const nextUrl = new URL(loc, currentUrl).href
-        console.log("[GAS webhook] redirect", attempt.label, hop, res.status, "->", nextUrl.slice(0, 140))
-        currentUrl = nextUrl
-        continue
-      }
-
-      if (res.ok) {
-        return res
-      }
-
-      const peek = await res.clone().text()
-      console.error("GAS webhook attempt failed", attempt.label, hop, res.status, peek.slice(0, 200))
-      break
+    for (const line of list) {
+      const nv = line.split(";")[0]?.trim()
+      if (!nv || !nv.includes("=")) continue
+      const eq = nv.indexOf("=")
+      map.set(nv.slice(0, eq), nv.slice(eq + 1))
     }
+    return [...map.entries()].map(([k, v]) => `${k}=${v}`).join("; ")
   }
 
-  return last ?? new Response("GAS webhook: no response", { status: 599 })
-}
-
-const bodySchema = z.object({
-  url: z.string().min(1),
-  title: z.string(),
-  channelName: z.string(),
-  publishedAt: z.string().nullable().optional(),
-  viewCount: z.number().nullable().optional(),
-  duration: z.number().nullable().optional(),
-  thumbnailUrl: z.string().nullable().optional(),
-})
-
-const SYSTEM_PROMPT = `あなたはYouTubeショート動画の構成分析に長けたマーケティングアナリストです。
-ユーザーから渡されるのは「動画URL」「タイトル」「チャンネル名」のみです。実際の映像は見られません。
-タイトルとチャンネル名から、ショート動画としてありがちなパターンを推論し、具体的に分析してください。
-
-必ず日本語のみで出力すること。
-次のJSONスキーマに完全一致する1つのJSONオブジェクトだけを返すこと（前後に説明文やマークダウンを付けない）。
-
-{
-  "hook": { "value": "短いラベル（例: 質問型フック）", "description": "1〜3文の説明" },
-  "emotion": { "value": "短いラベル", "description": "1〜3文の説明" },
-  "cta": { "value": "短いラベル", "description": "1〜3文の説明" },
-  "structure": { "value": "短いラベル", "description": "1〜3文の説明" },
-  "retentionDimensions": {
-    "hookStrength": 1,
-    "tempo": 1,
-    "structureClarity": 1,
-    "emotionalArc": 1,
-    "payoffStrength": 1,
-    "ctaNaturalness": 1
-  },
-  "retentionReasons": ["短い理由1（20〜45文字程度）", "短い理由2（20〜45文字程度）"],
-  "improvementIdeas": ["改善1", "改善2", "改善3", "改善4", "改善5"],
-  "nextVideoIdeas": ["アイデア1", "アイデア2", "アイデア3", "アイデア4"],
-  "subjectType": "メイン被写体の推定（例: 人物単体、複数人物、物・商品、文字メイン、画面収録のみ）",
-  "actionType": "映像の動き・行為の推定（例: 静止〜軽い動き、歩行・移動、スポーツ的動き、手元・食事メイン）",
-  "sceneChangeLevel": "カット・場面の切り替わりの多さ。次のいずれか1語: 低 / 中 / 高",
-  "endingType": "締め方の型（例: CTAで締める、オチで締める、伏線回収、ループ型、次回予告型）"
-}
-
-retentionDimensions の各キーは整数1〜5のみ。意味は次のとおり:
-- hookStrength: 冒頭フックの強さ
-- tempo: テンポの良さ
-- structureClarity: 構成のわかりやすさ
-- emotionalArc: 感情変化の有無・効き
-- payoffStrength: オチ・回収の強さ
-- ctaNaturalness: CTAの自然さ
-
-分析内容に応じて差をつけ、6軸すべて同じ整数（例: 全部4）にしないこと。
-弱みや不確かな点は1〜2、明確な強みは4〜5とし、タイトル・チャンネル文脈と矛盾しない採点にすること。
-retentionReasons は必ず2件。視聴維持率の見立ての根拠がわかる短文にすること（パーセント数値は書かないこと。システム側で算出する）。
-
-improvementIdeas は必ず5件、nextVideoIdeas は必ず4件にすること。
-
-subjectType / actionType / endingType は、タイトル・チャンネル名から推論した短いラベル（各20文字以内目安）。
-sceneChangeLevel は必ず「低」「中」「高」のいずれか1文字のみ（推論で決める）。
-
-古い形式の "retention": { "value", "description" } は出力しないこと（必ず retentionDimensions と retentionReasons を使うこと）。`
-
-export async function POST(req: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "OPENAI_API_KEY が設定されていません。.env.local に設定してください。" },
-      { status: 500 }
-    )
-  }
-
-  let json: unknown
-  try {
-    json = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
-  }
-
-  const parsed = bodySchema.safeParse(json)
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
-  }
-
-  const { url, title, channelName, publishedAt, viewCount, duration, thumbnailUrl } = parsed.data
-  if (!isLikelyYouTubeUrl(url)) {
-    return NextResponse.json({ error: "YouTube のURLではない可能性があります" }, { status: 400 })
-  }
-
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini"
-  const userContent = `動画URL: ${url}
-動画タイトル: ${title}
-チャンネル名: ${channelName}
-
-上記をもとにショート動画として分析し、指定スキーマのJSONのみを返してください。`
-
-  let res: Response
-  try {
-    res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+  async function postToGoogleAppsScriptWebhook(
+    execUrl: string,
+    jsonBody: string,
+    signal: AbortSignal
+  ): Promise<Response> {
+    const attempts: Array<{ label: string; headers: Record<string, string>; body: string }> = [
+      {
+        label: "json",
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+        body: jsonBody,
       },
-      body: JSON.stringify({
-        model,
-        temperature: 0.6,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userContent },
-        ],
-      }),
-    })
-  } catch (e) {
-    const message = e instanceof Error ? e.message : "OpenAI への接続に失敗しました"
-    return NextResponse.json({ error: message }, { status: 502 })
-  }
+      {
+        label: "textPlain",
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+        body: jsonBody,
+      },
+      {
+        label: "formData",
+        headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+        body: new URLSearchParams({ data: jsonBody }).toString(),
+      },
+    ]
 
-  if (!res.ok) {
-    const errText = await res.text()
-    return NextResponse.json(
-      { error: `OpenAI API エラー: ${res.status}`, detail: errText.slice(0, 500) },
-      { status: 502 }
-    )
-  }
+    const browserHeaders = {
+      Accept: "*/*",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      "X-Requested-With": "XMLHttpRequest",
+      Referer: "https://script.google.com/",
+    }
 
-  const completion = (await res.json()) as {
-    choices?: Array<{ message?: { content?: string | null } }>
-  }
-  const content = completion.choices?.[0]?.message?.content
-  if (!content) {
-    return NextResponse.json({ error: "AIからの応答が空でした" }, { status: 502 })
-  }
-
-  let analysisJson: unknown
-  try {
-    analysisJson = JSON.parse(content)
-  } catch {
-    return NextResponse.json({ error: "AIの応答をJSONとして解釈できませんでした" }, { status: 502 })
-  }
-
-  const analysisResult = shortsAnalysisAiSchema.safeParse(coerceAnalysisAiJson(analysisJson))
-  if (!analysisResult.success) {
-    return NextResponse.json(
-      { error: "AIの出力形式が不正です", issues: analysisResult.error.flatten() },
-      { status: 502 }
-    )
-  }
-
-  const analysis = normalizeShortsAnalysis(finalizeShortsAnalysisFromAi(analysisResult.data))
-
-  const vid = extractYouTubeVideoId(url)
-  /** 字幕は1回だけ取得し、タイムライン推定と参考動画選定の両方に使う（URLのみの入力で流れを判断） */
-  let transcript = ""
-  if (vid) {
     try {
-      const t = await fetchYouTubeTranscriptLines(vid, { durationHintSec: duration ?? null })
-      if (t?.trim()) transcript = t.trim()
-    } catch {
-      transcript = ""
-    }
-  }
-
-  const [timelineForSheet, referenceInsights] = await Promise.all([
-    transcript
-      ? inferStructureTimelineFromTranscript({
-          apiKey,
-          model,
-          transcript,
-          title,
-          channelName,
-          durationSec: duration ?? null,
-        }).catch((e) => {
-          console.error("[structure-timeline] infer failed", e)
-          return emptyStructureTimelineFields()
-        })
-      : Promise.resolve(emptyStructureTimelineFields()),
-    buildReferenceInsights(analysis, apiKey, model, {
-      sourceTitle: title,
-      sourceChannel: channelName,
-      transcriptExcerpt: transcript,
-      sourceThumbnailUrl: thumbnailUrl?.trim() || undefined,
-    }),
-  ])
-
-  const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL?.trim()
-  if (webhookUrl) {
-    try {
-      const u = new URL(webhookUrl)
-      console.log("[GAS webhook] 送信先 pathname:", u.pathname)
-    } catch {
-      console.error("[GAS] GOOGLE_SHEETS_WEBHOOK_URL が有効な URL ではありません")
-    }
-    const analyzedAt = new Date().toISOString()
-    const durationSec = duration ?? null
-    const videoType = detectVideoType(url)
-    /** スプレッドシート E/F 列用（URL の /shorts/ 判定。GAS の appendRow 列順に合わせて配置） */
-    const sheetColE_shorts = videoType === "shorts" ? "ショート動画" : ""
-    const sheetColF_regular = videoType === "long" ? "通常動画" : ""
-
-    const sheetThumbnailScore =
-      referenceInsights.sourceThumbnail != null ? referenceInsights.sourceThumbnail.thumbnailScore : null
-    const sheetThumbnailImprovements = formatSheetThumbnailImprovements(referenceInsights.sourceThumbnail)
-
-    const ideas = analysis.improvementIdeas
-    const nextIdeas = analysis.nextVideoIdeas
-
-    const payload = {
-      analyzedAt,
-      platform: detectPlatform(url),
-      videoType,
-      /** 別名: シート E 列向け */
-      sheetColE_shorts,
-      /** 別名: シート F 列向け */
-      sheetColF_regular,
-      url,
-      title,
-      channelName,
-      publishedAt: publishedAt ?? null,
-      viewCount: viewCount ?? null,
-      duration: durationSec,
-      durationSec,
-      thumbnailUrl: thumbnailUrl ?? null,
-      hookType: analysis.hook.value,
-      emotionType: analysis.emotion.value,
-      ctaType: analysis.cta.value,
-      structureType: analysis.structure.value,
-      subjectType: analysis.subjectType,
-      actionType: analysis.actionType,
-      sceneChangeLevel: analysis.sceneChangeLevel,
-      endingType: analysis.endingType,
-      retentionPrediction: analysis.retention.value,
-      retentionScore: analysis.retentionScore,
-      retentionLabel: analysis.retentionLabel,
-      retentionReasons: analysis.retentionReasons,
-      improvementIdea1: ideas[0] ?? "",
-      improvementIdea2: ideas[1] ?? "",
-      improvementIdea3: ideas[2] ?? "",
-      nextVideoIdea1: nextIdeas[0] ?? "",
-      nextVideoIdea2: nextIdeas[1] ?? "",
-      nextVideoIdea3: nextIdeas[2] ?? "",
-      /** 参考動画は送らない。拡張改善のみシート用。 */
-      sheetImprovementTags: formatSheetImprovementTags(referenceInsights.enrichedImprovements),
-      sheetImprovementLines: formatSheetImprovementLines(referenceInsights.enrichedImprovements),
-      ...timelineForSheet,
-      /** スプレッドシート AQ 列向け（サムネスコア 1〜5。サムネ未取得時は null） */
-      sheetThumbnailScore,
-      /** スプレッドシート AR 列向け（サムネ改善案。改行区切り・番号付き。未取得時は空文字） */
-      sheetThumbnailImprovements,
-    }
-
-    const timelinePayloadSlice = Object.fromEntries(
-      structureTimelineFieldKeys.map((k) => [k, (payload as Record<string, unknown>)[k]])
-    ) as Record<(typeof structureTimelineFieldKeys)[number], unknown>
-    const hasAnyTimelineSec = structureTimelineFieldKeys
-      .filter((k) => k.endsWith("Sec"))
-      .some((k) => {
-        const v = timelinePayloadSlice[k]
-        return typeof v === "string" && v.trim().length > 0
+      const fr = await fetch(execUrl, {
+        method: "POST",
+        headers: { ...browserHeaders, "Content-Type": "application/json; charset=utf-8" },
+        body: jsonBody,
+        redirect: "follow",
+        signal,
       })
-    console.log("[GAS webhook] timeline fields in payload (hookStartSec 等):", timelinePayloadSlice)
-    console.log("[GAS webhook] timeline numeric fields non-empty?:", hasAnyTimelineSec)
-
-    const jsonBody = JSON.stringify(payload)
-    const maxLogChars = 16_000
-    if (jsonBody.length <= maxLogChars) {
-      console.log("[GAS webhook] full payload JSON:", jsonBody)
-    } else {
-      console.log("[GAS webhook] full payload JSON (truncated, length=" + jsonBody.length + "):", jsonBody.slice(0, maxLogChars) + "…")
-    }
-
-    const ac = new AbortController()
-    const timeoutId = setTimeout(() => ac.abort(), 20000)
-    try {
-      const webhookRes = await postToGoogleAppsScriptWebhook(webhookUrl, jsonBody, ac.signal)
-      const bodyText = await webhookRes.text()
-      if (!webhookRes.ok) {
-        console.error("GAS webhook non-2xx", webhookRes.status, bodyText.slice(0, 400))
-      } else {
-        console.log("GAS webhook", webhookRes.status, bodyText.slice(0, 200))
+      const txt = await fr.text()
+      const bad = txt.includes("ページが見つかりません") || txt.includes("Script function not found")
+      const finalUrl = typeof (fr as { url?: string }).url === "string" ? (fr as { url: string }).url : ""
+      console.log("[GAS webhook] redirect:follow", fr.status, finalUrl.slice(0, 120), txt.slice(0, 80))
+      if (fr.ok && !bad) {
+        return new Response(txt, { status: fr.status, headers: fr.headers })
       }
     } catch (e) {
-      console.error("GAS webhook POST failed", e)
-    } finally {
-      clearTimeout(timeoutId)
+      console.error("[GAS webhook] redirect:follow error", e)
     }
+
+    let last: Response | null = null
+
+    for (const attempt of attempts) {
+      let currentUrl = execUrl
+      let cookieJar = ""
+      for (let hop = 0; hop < 8; hop++) {
+        const reqHeaders: Record<string, string> = { ...browserHeaders, ...attempt.headers }
+        if (cookieJar) reqHeaders.Cookie = cookieJar
+
+        const res = await fetch(currentUrl, {
+          method: "POST",
+          headers: reqHeaders,
+          body: attempt.body,
+          signal,
+          redirect: "manual",
+        })
+        last = res
+        cookieJar = mergeCookiesFromResponse(cookieJar, res)
+
+        if (res.status >= 300 && res.status < 400) {
+          const loc = res.headers.get("location")
+          if (!loc) {
+            console.error("GAS webhook redirect without Location", attempt.label, hop, res.status)
+            break
+          }
+          const nextUrl = new URL(loc, currentUrl).href
+          console.log("[GAS webhook] redirect", attempt.label, hop, res.status, "->", nextUrl.slice(0, 140))
+          currentUrl = nextUrl
+          continue
+        }
+
+        if (res.ok) {
+          return res
+        }
+
+        const peek = await res.clone().text()
+        console.error("GAS webhook attempt failed", attempt.label, hop, res.status, peek.slice(0, 200))
+        break
+      }
+    }
+
+    return last ?? new Response("GAS webhook: no response", { status: 599 })
   }
 
-  return NextResponse.json({ analysis, referenceInsights })
-}
+  const bodySchema = z.object({
+    url: z.string().min(1),
+    title: z.string(),
+    channelName: z.string(),
+    publishedAt: z.string().nullable().optional(),
+    viewCount: z.number().nullable().optional(),
+    duration: z.number().nullable().optional(),
+    thumbnailUrl: z.string().nullable().optional(),
+  })
+
+  const SYSTEM_PROMPT = `あなたはYouTubeショート動画の構成分析に長けたマーケティングアナリストです。
+  ユーザーから渡されるのは「動画URL」「タイトル」「チャンネル名」と、取得できた場合は「字幕テキスト（秒付き）」です。実際の映像は見られません。
+
+  必ず日本語のみで出力すること。
+  次のJSONスキーマに完全一致する1つのJSONオブジェクトだけを返すこと（前後に説明文やマークダウンを付けない）。
+
+  {
+    "hook": { "value": "短いラベル（例: 質問型フック）", "description": "1〜3文の説明" },
+    "emotion": { "value": "短いラベル", "description": "1〜3文の説明" },
+    "cta": { "value": "短いラベル", "description": "1〜3文の説明" },
+    "structure": { "value": "短いラベル", "description": "1〜3文の説明" },
+    "retentionDimensions": {
+      "hookStrength": 1,
+      "tempo": 1,
+      "structureClarity": 1,
+      "emotionalArc": 1,
+      "payoffStrength": 1,
+      "ctaNaturalness": 1
+    },
+    "retentionReasons": ["短い理由1（20〜45文字程度）", "短い理由2（20〜45文字程度）"],
+    "improvementIdeas": ["改善1", "改善2", "改善3", "改善4", "改善5"],
+    "nextVideoIdeas": ["アイデア1", "アイデア2", "アイデア3", "アイデア4"],
+    "subjectType": "メイン被写体の推定（例: 人物単体、複数人物、物・商品、文字メイン、画面収録のみ）",
+    "actionType": "映像の動き・行為の推定（例: 静止〜軽い動き、歩行・移動、スポーツ的動き、手元・食事メイン）",
+    "sceneChangeLevel": "カット・場面の切り替わりの多さ。次のいずれか1語: 低 / 中 / 高",
+    "endingType": "締め方の型（例: CTAで締める、オチで締める、伏線回収、ループ型、次回予告型）"
+  }
+
+  retentionDimensions の各キーは整数1〜5のみ。意味は次のとおり:
+  - hookStrength: 冒頭フックの強さ
+  - tempo: テンポの良さ
+  - structureClarity: 構成のわかりやすさ
+  - emotionalArc: 感情変化の有無・効き
+  - payoffStrength: オチ・回収の強さ
+  - ctaNaturalness: CTAの自然さ
+
+  分析内容に応じて差をつけ、6軸すべて同じ整数（例: 全部4）にしないこと。
+  弱みや不確かな点は1〜2、明確な強みは4〜5とし、タイトル・チャンネル文脈と矛盾しない採点にすること。
+  retentionReasons は必ず2件。視聴維持率の見立ての根拠がわかる短文にすること（パーセント数値は書かないこと。システム側で算出する）。
+
+  improvementIdeas は必ず5件、nextVideoIdeas は必ず4件にすること。
+
+  ★ improvementIdeas は「この動画固有の改善点」を書くこと。
+  字幕が提供された場合は、具体的な発言内容・秒数・場面を引用して、汎用的でない改善案にすること。
+  例：「0:15の『〜』という発言の後にテンポが落ちているため、ここをカットしてオチに直結させると視聴維持率が上がる」
+
+  subjectType / actionType / endingType は、タイトル・チャンネル名から推論した短いラベル（各20文字以内目安）。
+  sceneChangeLevel は必ず「低」「中」「高」のいずれか1文字のみ（推論で決める）。
+
+  古い形式の "retention": { "value", "description" } は出力しないこと（必ず retentionDimensions と retentionReasons を使うこと）。`
+
+  export async function POST(req: NextRequest) {
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "OPENAI_API_KEY が設定されていません。.env.local に設定してください。" },
+        { status: 500 }
+      )
+    }
+
+    let json: unknown
+    try {
+      json = await req.json()
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
+    }
+
+    const parsed = bodySchema.safeParse(json)
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
+    }
+
+    const { url, title, channelName, publishedAt, viewCount, duration, thumbnailUrl } = parsed.data
+    if (!isLikelyYouTubeUrl(url)) {
+      return NextResponse.json({ error: "YouTube のURLではない可能性があります" }, { status: 400 })
+    }
+
+    const model = process.env.OPENAI_MODEL || "gpt-4o-mini"
+
+    // ★ 字幕を先に取得してメイン分析にも使う
+    const vid = extractYouTubeVideoId(url)
+    let transcript = ""
+    if (vid) {
+      try {
+        const t = await fetchYouTubeTranscriptLines(vid, { durationHintSec: duration ?? null })
+        if (t?.trim()) transcript = t.trim()
+      } catch {
+        transcript = ""
+      }
+    }
+
+    const userContent = `動画URL: ${url}
+  動画タイトル: ${title}
+  チャンネル名: ${channelName}
+  ${transcript ? `\n--- 字幕（秒付き） ---\n${transcript.slice(0, 16000)}` : "（字幕取得できませんでした）"}
+
+  【厳守】improvementIdeas の5件は以下のルールに従うこと：
+  - 必ず字幕の具体的な発言・秒数を「〇〇秒の『△△』という発言の後に〜」の形式で引用すること
+  - 「フックを強化する」「テンポを上げる」「CTAを明確にする」「視聴者参加型」などの汎用表現だけで終わらせることを禁止する
+  - この動画にしか当てはまらない改善案を書くこと
+  上記をもとに分析し、指定スキーマのJSONのみを返してください。`
+    let res: Response
+    try {
+      res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0.6,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: userContent },
+          ],
+        }),
+      })
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "OpenAI への接続に失敗しました"
+      return NextResponse.json({ error: message }, { status: 502 })
+    }
+
+    if (!res.ok) {
+      const errText = await res.text()
+      return NextResponse.json(
+        { error: `OpenAI API エラー: ${res.status}`, detail: errText.slice(0, 500) },
+        { status: 502 }
+      )
+    }
+
+    const completion = (await res.json()) as {
+      choices?: Array<{ message?: { content?: string | null } }>
+    }
+    const content = completion.choices?.[0]?.message?.content
+    if (!content) {
+      return NextResponse.json({ error: "AIからの応答が空でした" }, { status: 502 })
+    }
+
+    let analysisJson: unknown
+    try {
+      analysisJson = JSON.parse(content)
+    } catch {
+      return NextResponse.json({ error: "AIの応答をJSONとして解釈できませんでした" }, { status: 502 })
+    }
+
+    const analysisResult = shortsAnalysisAiSchema.safeParse(coerceAnalysisAiJson(analysisJson))
+    if (!analysisResult.success) {
+      return NextResponse.json(
+        { error: "AIの出力形式が不正です", issues: analysisResult.error.flatten() },
+        { status: 502 }
+      )
+    }
+
+    const rawAnalysis = normalizeShortsAnalysis(finalizeShortsAnalysisFromAi(analysisResult.data))
+
+    // 秒数を「〇分〇秒」形式に変換
+    function convertSecondsToMinSec(text: string): string {
+      return text.replace(/(\d+(?:\.\d+)?)秒/g, (_, numStr: string) => {
+        const totalSec = parseFloat(numStr)
+        const minutes = Math.floor(totalSec / 60)
+        const seconds = Math.round(totalSec % 60)
+        return `${minutes}分${seconds}秒`
+      })
+    }
+
+    const analysis = {
+      ...rawAnalysis,
+      improvementIdeas: rawAnalysis.improvementIdeas.map(convertSecondsToMinSec),
+    }
+
+    const [timelineForSheet, referenceInsights] = await Promise.all([
+      transcript
+        ? inferStructureTimelineFromTranscript({
+            apiKey,
+            model,
+            transcript,
+            title,
+            channelName,
+            durationSec: duration ?? null,
+          }).catch((e) => {
+            console.error("[structure-timeline] infer failed", e)
+            return emptyStructureTimelineFields()
+          })
+        : Promise.resolve(emptyStructureTimelineFields()),
+      buildReferenceInsights(analysis, apiKey, model, {
+        sourceTitle: title,
+        sourceChannel: channelName,
+        transcriptExcerpt: transcript,
+        sourceThumbnailUrl: thumbnailUrl?.trim() || undefined,
+      }),
+    ])
+
+    const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL?.trim()
+    if (webhookUrl) {
+      try {
+        const u = new URL(webhookUrl)
+        console.log("[GAS webhook] 送信先 pathname:", u.pathname)
+      } catch {
+        console.error("[GAS] GOOGLE_SHEETS_WEBHOOK_URL が有効な URL ではありません")
+      }
+      const analyzedAt = new Date().toISOString()
+      const durationSec = duration ?? null
+      const videoType = detectVideoType(url)
+      const sheetColE_shorts = videoType === "shorts" ? "ショート動画" : ""
+      const sheetColF_regular = videoType === "long" ? "通常動画" : ""
+
+      const sheetThumbnailScore =
+        referenceInsights.sourceThumbnail != null ? referenceInsights.sourceThumbnail.thumbnailScore : null
+      const sheetThumbnailImprovements = formatSheetThumbnailImprovements(referenceInsights.sourceThumbnail)
+
+      const ideas = analysis.improvementIdeas
+      const nextIdeas = analysis.nextVideoIdeas
+
+      const payload = {
+        analyzedAt,
+        platform: detectPlatform(url),
+        videoType,
+        sheetColE_shorts,
+        sheetColF_regular,
+        url,
+        title,
+        channelName,
+        publishedAt: publishedAt ?? null,
+        viewCount: viewCount ?? null,
+        duration: durationSec,
+        durationSec,
+        thumbnailUrl: thumbnailUrl ?? null,
+        hookType: analysis.hook.value,
+        emotionType: analysis.emotion.value,
+        ctaType: analysis.cta.value,
+        structureType: analysis.structure.value,
+        subjectType: analysis.subjectType,
+        actionType: analysis.actionType,
+        sceneChangeLevel: analysis.sceneChangeLevel,
+        endingType: analysis.endingType,
+        retentionPrediction: analysis.retention.value,
+        retentionScore: analysis.retentionScore,
+        retentionLabel: analysis.retentionLabel,
+        retentionReasons: analysis.retentionReasons,
+        improvementIdea1: ideas[0] ?? "",
+        improvementIdea2: ideas[1] ?? "",
+        improvementIdea3: ideas[2] ?? "",
+        nextVideoIdea1: nextIdeas[0] ?? "",
+        nextVideoIdea2: nextIdeas[1] ?? "",
+        nextVideoIdea3: nextIdeas[2] ?? "",
+        sheetImprovementTags: formatSheetImprovementTags(referenceInsights.enrichedImprovements),
+        sheetImprovementLines: formatSheetImprovementLines(referenceInsights.enrichedImprovements),
+        ...timelineForSheet,
+        sheetThumbnailScore,
+        sheetThumbnailImprovements,
+      }
+
+      const timelinePayloadSlice = Object.fromEntries(
+        structureTimelineFieldKeys.map((k) => [k, (payload as Record<string, unknown>)[k]])
+      ) as Record<(typeof structureTimelineFieldKeys)[number], unknown>
+      const hasAnyTimelineSec = structureTimelineFieldKeys
+        .filter((k) => k.endsWith("Sec"))
+        .some((k) => {
+          const v = timelinePayloadSlice[k]
+          return typeof v === "string" && v.trim().length > 0
+        })
+      console.log("[GAS webhook] timeline fields in payload (hookStartSec 等):", timelinePayloadSlice)
+      console.log("[GAS webhook] timeline numeric fields non-empty?:", hasAnyTimelineSec)
+
+      const jsonBody = JSON.stringify(payload)
+      const maxLogChars = 16_000
+      if (jsonBody.length <= maxLogChars) {
+        console.log("[GAS webhook] full payload JSON:", jsonBody)
+      } else {
+        console.log("[GAS webhook] full payload JSON (truncated, length=" + jsonBody.length + "):", jsonBody.slice(0, maxLogChars) + "…")
+      }
+
+      const ac = new AbortController()
+      const timeoutId = setTimeout(() => ac.abort(), 20000)
+      try {
+        const webhookRes = await postToGoogleAppsScriptWebhook(webhookUrl, jsonBody, ac.signal)
+        const bodyText = await webhookRes.text()
+        if (!webhookRes.ok) {
+          console.error("GAS webhook non-2xx", webhookRes.status, bodyText.slice(0, 400))
+        } else {
+          console.log("GAS webhook", webhookRes.status, bodyText.slice(0, 200))
+        }
+      } catch (e) {
+        console.error("GAS webhook POST failed", e)
+      } finally {
+        clearTimeout(timeoutId)
+      }
+    }
+
+    return NextResponse.json({ analysis, referenceInsights })
+  }
