@@ -55,6 +55,7 @@ export function UrlInputScreen({ onAnalyze }: UrlInputScreenProps) {
           <p className="mx-auto max-w-xl text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
             <span className="block">{t("hero.sub.line1")}</span>
             <span className="mt-1 block">{t("hero.sub.line2")}</span>
+            <span className="mt-2 block text-sm text-[oklch(0.72_0.14_260)]">{t("hero.sub.line3")}</span>
           </p>
         </div>
 
