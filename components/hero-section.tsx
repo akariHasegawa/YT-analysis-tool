@@ -130,7 +130,7 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
       <AnimatedBackground />
 
       {/* Content container with relative positioning */}
-      <div className="relative z-10 flex flex-col items-center gap-4 sm:gap-6">
+      <div className="relative z-10 flex flex-col items-center gap-4 pb-32 sm:gap-6">
         {/* Badge */}
         <div className="animate-fade-up">
           <div className="inline-flex items-center gap-2 rounded-full border border-[oklch(0.5_0.12_270_/_0.3)] bg-[oklch(0.18_0.06_280_/_0.4)] px-4 py-1.5 text-sm font-medium text-[oklch(0.78_0.14_260)]">
