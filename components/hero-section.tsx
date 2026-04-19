@@ -125,12 +125,12 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
   const { t } = useLanguage()
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-between overflow-hidden px-4 py-12">
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-16">
       {/* Advanced animated background */}
       <AnimatedBackground />
 
       {/* Content container with relative positioning */}
-      <div className="relative z-10 flex flex-col items-center gap-6 sm:gap-8">
+      <div className="relative z-10 flex flex-col items-center gap-4 sm:gap-6">
         {/* Badge */}
         <div className="animate-fade-up">
           <div className="inline-flex items-center gap-2 rounded-full border border-[oklch(0.5_0.12_270_/_0.3)] bg-[oklch(0.18_0.06_280_/_0.4)] px-4 py-1.5 text-sm font-medium text-[oklch(0.78_0.14_260)]">
@@ -141,15 +141,15 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
 
         {/* Main headline - gradient text */}
         <div className="animate-fade-up-delay-1 space-y-1 text-center">
-          <h1 className="font-display text-3xl font-bold leading-snug tracking-tight text-neon-hero sm:text-4xl md:text-5xl lg:text-6xl">
-            <span>{t("hero.title.line1")}</span>
+          <h1 className="font-display text-3xl font-bold leading-snug tracking-tight sm:text-4xl md:text-5xl">
+            <span className="text-[oklch(0.88_0.16_250)]">{t("hero.title.line1")}</span>
             <br />
-            <span>{t("hero.title.line2")}</span>
+            <span className="text-[oklch(0.88_0.16_250)]">{t("hero.title.line2")}</span>
           </h1>
         </div>
 
         {/* Subheadline */}
-        <p className="animate-fade-up-delay-2 text-center text-lg font-semibold text-neon-accent sm:text-xl">
+        <p className="animate-fade-up-delay-2 text-center text-base font-semibold text-[oklch(0.72_0.18_280)] sm:text-lg">
           {t("hero.subheadline")}
         </p>
 
@@ -157,7 +157,7 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
         <button
           type="button"
           onClick={onGetStarted}
-          className="animate-fade-up-delay-3 neon-button animate-pulse-glow group relative rounded-xl px-6 py-3 text-base font-semibold transition-all duration-300 sm:px-8 sm:py-4"
+          className="animate-fade-up-delay-3 neon-button group relative mt-4 rounded-xl px-6 py-3 text-base font-semibold transition-all duration-300 sm:mt-6 sm:px-8 sm:py-4"
         >
           <span className="flex items-center gap-2">
             {t("hero.cta")}
@@ -170,8 +170,8 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
         </p>
       </div>
 
-      {/* Stats section - at bottom */}
-      <div className="relative z-10 flex justify-center px-4">
+      {/* Stats section - absolute bottom positioning */}
+      <div className="absolute bottom-8 left-0 right-0 z-10 flex justify-center px-4">
         <div className="grid grid-cols-3 gap-6 sm:gap-12">
           {[
             { value: "12,400+", label: t("hero.stat1.label") },
