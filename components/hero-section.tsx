@@ -165,7 +165,7 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
           </span>
         </button>
 
-        <p className="animate-fade-up-delay-4 text-xs text-[oklch(0.65_0.08_270)] sm:text-sm">
+        <p className="animate-fade-up-delay-4 text-xs text-[oklch(0.85_0.02_270)] sm:text-sm">
           {t("hero.ctaNote")}
         </p>
       </div>
@@ -178,11 +178,11 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
             <div className="text-xs text-[oklch(0.65_0.08_270)]">{t("hero.stat1.label")}</div>
           </div>
           <div className="text-center">
-            <div className="text-xl font-bold text-[oklch(0.82_0.16_250)] sm:text-2xl">4</div>
+            <div className="text-xl font-bold text-[oklch(0.82_0.16_250)] sm:text-2xl">4<span className="text-base font-medium">パターン</span></div>
             <div className="text-xs text-[oklch(0.65_0.08_270)]">{t("hero.stat2.label")}</div>
           </div>
           <div className="text-center">
-            <div className="text-xl font-bold text-[oklch(0.82_0.16_250)] sm:text-2xl">2</div>
+            <div className="text-xl font-bold text-[oklch(0.82_0.16_250)] sm:text-2xl">2<span className="text-base font-medium">種類</span></div>
             <div className="text-xs text-[oklch(0.65_0.08_270)]">{t("hero.stat3.label")}</div>
           </div>
         </div>
