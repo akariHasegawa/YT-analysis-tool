@@ -42,12 +42,12 @@ function FloatingParticles() {
 
 // Sample video thumbnails for the flowing cards
 const SAMPLE_THUMBNAILS = [
-  { title: "Short 1", views: "1.2M" },
-  { title: "Short 2", views: "890K" },
-  { title: "Short 3", views: "2.1M" },
-  { title: "Short 4", views: "450K" },
-  { title: "Short 5", views: "3.4M" },
-  { title: "Short 6", views: "780K" },
+  { title: "ショート 1", views: "1.2M" },
+  { title: "ショート 2", views: "890K" },
+  { title: "ショート 3", views: "2.1M" },
+  { title: "ショート 4", views: "450K" },
+  { title: "ショート 5", views: "3.4M" },
+  { title: "ショート 6", views: "780K" },
 ]
 
 // Flowing video cards background
