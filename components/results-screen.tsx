@@ -20,8 +20,11 @@ import {
   Video,
   Copy,
   Check,
+  Lock,
   type LucideIcon,
 } from "lucide-react"
+import { LockedFeature, PlanBadge } from "@/components/locked-feature"
+import { UpgradeModal, type PlanType } from "@/components/upgrade-modal"
 import { cn } from "@/lib/utils"
 import type { VideoInfo } from "@/lib/video-info"
 import type { ShortsAnalysis } from "@/lib/shorts-analysis"
@@ -41,6 +44,10 @@ interface ResultsScreenProps {
   analysisLoading: boolean
   referenceInsights: ReferenceInsightsPayload | null
   onReset: () => void
+  // Plan-related props (defaults for demo)
+  userPlan?: PlanType
+  remainingAnalyses?: number
+  maxAnalyses?: number
 }
 
 type AnalysisCardKey = "hook" | "emotion" | "cta" | "structure" | "retention"
@@ -97,9 +104,30 @@ export function ResultsScreen({
   analysisLoading,
   referenceInsights,
   onReset,
+  userPlan = "free",
+  remainingAnalyses = 0,
+  maxAnalyses = 1,
 }: ResultsScreenProps) {
   const { t, language } = useLanguage()
   const locale = language === "ja" ? "ja-JP" : "en-US"
+  
+  // Upgrade modal state
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false)
+  const [targetPlan, setTargetPlan] = useState<PlanType>("pro")
+  
+  const handleUpgradeClick = (plan: PlanType) => {
+    setTargetPlan(plan)
+    setUpgradeModalOpen(true)
+  }
+  
+  const handleUpgrade = (plan: PlanType) => {
+    // Placeholder for Stripe integration - will be implemented later
+    setUpgradeModalOpen(false)
+  }
+  
+  // Feature access based on plan
+  const isPro = userPlan === "pro" || userPlan === "business"
+  const isBusiness = userPlan === "business"
 
   type PromptState = {
     loading: "script" | "video" | null
@@ -208,14 +236,17 @@ export function ResultsScreen({
             <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
             {t("results.newAnalysis")}
           </button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onReset}
-            className="neon-button h-9 rounded-xl border-0 text-xs font-semibold sm:text-sm"
-          >
-            {t("results.nextVideo")}
-          </Button>
+          <div className="flex items-center gap-3">
+            <PlanBadge plan={userPlan} remainingAnalyses={remainingAnalyses} maxAnalyses={maxAnalyses} />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onReset}
+              className="neon-button h-9 rounded-xl border-0 text-xs font-semibold sm:text-sm"
+            >
+              {t("results.nextVideo")}
+            </Button>
+          </div>
         </div>
 
         <h1 className="text-balance text-2xl font-bold tracking-tight text-neon-hero sm:text-3xl">{t("results.title")}</h1>
@@ -316,7 +347,9 @@ export function ResultsScreen({
             ) : null}
 
             {analysis && referenceInsights && referenceInsights.enrichedImprovements.length > 0 ? (
-              <TaggedImprovementsSection rows={referenceInsights.enrichedImprovements} />
+              <LockedFeature isLocked={!isPro} requiredPlan="pro" onUpgradeClick={handleUpgradeClick}>
+                <TaggedImprovementsSection rows={referenceInsights.enrichedImprovements} />
+              </LockedFeature>
             ) : null}
 
             {analysis ? (
@@ -347,91 +380,102 @@ export function ResultsScreen({
             ) : null}
 
             {analysis ? (
-              <section className="space-y-4">
-                <SectionLabel>{t("results.ideas")}</SectionLabel>
-                <div className="glass-card neon-card-glow rounded-2xl p-6 sm:p-8">
-                  <div className="mb-6 flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[oklch(0.3_0.12_300_/_0.45)] text-[oklch(0.82_0.16_300)]">
-                      <Film className="h-5 w-5" />
+              <LockedFeature isLocked={!isPro} requiredPlan="pro" onUpgradeClick={handleUpgradeClick}>
+                <section className="space-y-4">
+                  <SectionLabel>{t("results.ideas")}</SectionLabel>
+                  <div className="glass-card neon-card-glow rounded-2xl p-6 sm:p-8">
+                    <div className="mb-6 flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[oklch(0.3_0.12_300_/_0.45)] text-[oklch(0.82_0.16_300)]">
+                        <Film className="h-5 w-5" />
+                      </div>
+                      <h3 className="text-base font-semibold text-foreground sm:text-lg">{t("results.ideasTitle")}</h3>
                     </div>
-                    <h3 className="text-base font-semibold text-foreground sm:text-lg">{t("results.ideasTitle")}</h3>
-                  </div>
-                  <div className="grid grid-cols-1 gap-4">
-                    {analysis.nextVideoIdeas.map((text, i) => {
-                      const ps = getPromptState(i)
-                      const activePrompt = ps.open === "script" ? ps.scriptPrompt : ps.videoPrompt
-                      return (
-                        <div key={i} className="rounded-xl border border-[oklch(0.5_0.1_270_/_0.2)] bg-[oklch(0.16_0.05_280_/_0.35)] overflow-hidden">
-                          {/* アイデアテキスト */}
-                          <div className="flex items-start gap-3 px-4 py-4">
-                            <span className="pt-0.5 text-lg font-bold leading-none text-[oklch(0.72_0.18_250)]">→</span>
-                            <span className="text-sm leading-relaxed text-foreground/95">{text}</span>
-                          </div>
-                          {/* ボタン */}
-                          <div className="flex gap-2 px-4 pb-4">
-                            <button
-                              type="button"
-                              onClick={() => generatePrompt(i, "script")}
-                              disabled={ps.loading !== null}
-                              className={cn(
-                                "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
-                                ps.open === "script"
-                                  ? "bg-[oklch(0.45_0.18_250)] text-white"
-                                  : "bg-[oklch(0.25_0.08_270_/_0.6)] text-[oklch(0.78_0.12_260)] hover:bg-[oklch(0.35_0.12_260_/_0.7)]",
-                                ps.loading === "script" && "opacity-60 cursor-not-allowed"
-                              )}
-                            >
-                              <FileText className="h-3.5 w-3.5" />
-                              {ps.loading === "script" ? "生成中..." : "台本プロンプト"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => generatePrompt(i, "video")}
-                              disabled={ps.loading !== null}
-                              className={cn(
-                                "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
-                                ps.open === "video"
-                                  ? "bg-[oklch(0.45_0.18_300)] text-white"
-                                  : "bg-[oklch(0.25_0.08_270_/_0.6)] text-[oklch(0.78_0.12_260)] hover:bg-[oklch(0.35_0.12_260_/_0.7)]",
-                                ps.loading === "video" && "opacity-60 cursor-not-allowed"
-                              )}
-                            >
-                              <Video className="h-3.5 w-3.5" />
-                              {ps.loading === "video" ? "生成中..." : "動画プロンプト"}
-                            </button>
-                          </div>
-                          {/* 生成されたプロンプト表示 */}
-                          {ps.open && activePrompt && (
-                            <div className="border-t border-[oklch(0.5_0.1_270_/_0.15)] mx-0">
-                              <div className="flex items-center justify-between px-4 py-2 bg-[oklch(0.12_0.04_280_/_0.5)]">
-                                <span className="text-xs font-semibold text-[oklch(0.65_0.1_270)]">
-                                  {ps.open === "script" ? "台本プロンプト" : "動画生成プロンプト"}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => copyPrompt(i)}
-                                  className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[oklch(0.72_0.12_260)] transition-colors hover:bg-[oklch(0.3_0.08_270_/_0.4)]"
-                                >
-                                  {ps.copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
-                                  {ps.copied ? "コピー済み" : "コピー"}
-                                </button>
-                              </div>
-                              <pre className="whitespace-pre-wrap px-4 py-3 text-xs leading-relaxed text-foreground/80 font-sans max-h-64 overflow-y-auto">
-                                {activePrompt}
-                              </pre>
+                    <div className="grid grid-cols-1 gap-4">
+                      {analysis.nextVideoIdeas.map((text, i) => {
+                        const ps = getPromptState(i)
+                        const activePrompt = ps.open === "script" ? ps.scriptPrompt : ps.videoPrompt
+                        return (
+                          <div key={i} className="rounded-xl border border-[oklch(0.5_0.1_270_/_0.2)] bg-[oklch(0.16_0.05_280_/_0.35)] overflow-hidden">
+                            {/* アイデアテキスト */}
+                            <div className="flex items-start gap-3 px-4 py-4">
+                              <span className="pt-0.5 text-lg font-bold leading-none text-[oklch(0.72_0.18_250)]">→</span>
+                              <span className="text-sm leading-relaxed text-foreground/95">{text}</span>
                             </div>
-                          )}
-                        </div>
-                      )
-                    })}
+                            {/* ボタン */}
+                            <div className="flex gap-2 px-4 pb-4">
+                              <button
+                                type="button"
+                                onClick={() => generatePrompt(i, "script")}
+                                disabled={ps.loading !== null}
+                                className={cn(
+                                  "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
+                                  ps.open === "script"
+                                    ? "bg-[oklch(0.45_0.18_250)] text-white"
+                                    : "bg-[oklch(0.25_0.08_270_/_0.6)] text-[oklch(0.78_0.12_260)] hover:bg-[oklch(0.35_0.12_260_/_0.7)]",
+                                  ps.loading === "script" && "opacity-60 cursor-not-allowed"
+                                )}
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                                {ps.loading === "script" ? "生成中..." : "台本プロンプト"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => generatePrompt(i, "video")}
+                                disabled={ps.loading !== null}
+                                className={cn(
+                                  "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
+                                  ps.open === "video"
+                                    ? "bg-[oklch(0.45_0.18_300)] text-white"
+                                    : "bg-[oklch(0.25_0.08_270_/_0.6)] text-[oklch(0.78_0.12_260)] hover:bg-[oklch(0.35_0.12_260_/_0.7)]",
+                                  ps.loading === "video" && "opacity-60 cursor-not-allowed"
+                                )}
+                              >
+                                <Video className="h-3.5 w-3.5" />
+                                {ps.loading === "video" ? "生成中..." : "動画プロンプト"}
+                              </button>
+                            </div>
+                            {/* 生成されたプロンプト表示 */}
+                            {ps.open && activePrompt && (
+                              <div className="border-t border-[oklch(0.5_0.1_270_/_0.15)] mx-0">
+                                <div className="flex items-center justify-between px-4 py-2 bg-[oklch(0.12_0.04_280_/_0.5)]">
+                                  <span className="text-xs font-semibold text-[oklch(0.65_0.1_270)]">
+                                    {ps.open === "script" ? "台本プロンプト" : "動画生成プロンプト"}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => copyPrompt(i)}
+                                    className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[oklch(0.72_0.12_260)] transition-colors hover:bg-[oklch(0.3_0.08_270_/_0.4)]"
+                                  >
+                                    {ps.copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+                                    {ps.copied ? "コピー済み" : "コピー"}
+                                  </button>
+                                </div>
+                                <pre className="whitespace-pre-wrap px-4 py-3 text-xs leading-relaxed text-foreground/80 font-sans max-h-64 overflow-y-auto">
+                                  {activePrompt}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-                </div>
-              </section>
+                </section>
+              </LockedFeature>
             ) : null}
 
           </>
         ) : null}
       </div>
+      
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={upgradeModalOpen}
+        onClose={() => setUpgradeModalOpen(false)}
+        currentPlan={userPlan}
+        targetPlan={targetPlan}
+        onUpgrade={handleUpgrade}
+      />
     </main>
   )
 }

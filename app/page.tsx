@@ -1,22 +1,32 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef } from "react"
+import { HeroSection } from "@/components/hero-section"
+import { ModeSelection, type AnalysisMode } from "@/components/mode-selection"
 import { UrlInputScreen } from "@/components/url-input-screen"
 import { ProcessingScreen } from "@/components/processing-screen"
 import { ResultsScreen } from "@/components/results-screen"
+import { SignupModal } from "@/components/signup-modal"
 import type { ShortsAnalysis } from "@/lib/shorts-analysis"
 import type { ReferenceInsightsPayload } from "@/lib/reference-insights"
 import type { VideoInfo } from "@/lib/video-info"
+import type { PlanType } from "@/components/upgrade-modal"
 import { useLanguage } from "@/lib/language-context"
 
-type Screen = "input" | "processing" | "results"
+type Screen = "hero" | "mode-selection" | "input" | "processing" | "results"
 
 export default function Home() {
   const { t } = useLanguage()
   const tRef = useRef(t)
   tRef.current = t
-  const [screen, setScreen] = useState<Screen>("input")
+
+  // Screen flow state
+  const [screen, setScreen] = useState<Screen>("hero")
+  const [selectedMode, setSelectedMode] = useState<AnalysisMode>("buzz")
+
+  // Analysis state
   const [analyzedUrl, setAnalyzedUrl] = useState("")
+  const [competitorUrl, setCompetitorUrl] = useState<string | undefined>()
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null)
   const [metadataError, setMetadataError] = useState<string | undefined>()
   const [analysis, setAnalysis] = useState<ShortsAnalysis | null>(null)
@@ -24,8 +34,41 @@ export default function Home() {
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [referenceInsights, setReferenceInsights] = useState<ReferenceInsightsPayload | null>(null)
 
-  const handleAnalyze = useCallback((url: string) => {
+  // Auth & plan state (demo defaults - will be replaced with Supabase)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [showSignupModal, setShowSignupModal] = useState(false)
+  const [userPlan, setUserPlan] = useState<PlanType>("free")
+  const [remainingAnalyses, setRemainingAnalyses] = useState(1)
+  const [hasUsedFreeAnalysis, setHasUsedFreeAnalysis] = useState(false)
+
+  // Calculate max analyses based on plan
+  const maxAnalyses = userPlan === "business" ? 100 : userPlan === "pro" ? 30 : 1
+
+  // Hero CTA click
+  const handleGetStarted = useCallback(() => {
+    setScreen("mode-selection")
+  }, [])
+
+  // Mode selection
+  const handleSelectMode = useCallback((mode: AnalysisMode) => {
+    setSelectedMode(mode)
+    setScreen("input")
+  }, [])
+
+  // Back to mode selection
+  const handleBackToModes = useCallback(() => {
+    setScreen("mode-selection")
+  }, [])
+
+  // Back to hero
+  const handleBackToHero = useCallback(() => {
+    setScreen("hero")
+  }, [])
+
+  // Start analysis
+  const handleAnalyze = useCallback((url: string, competitor?: string) => {
     setAnalyzedUrl(url)
+    setCompetitorUrl(competitor)
     setVideoInfo(null)
     setMetadataError(undefined)
     setAnalysis(null)
@@ -35,6 +78,7 @@ export default function Home() {
     setScreen("processing")
   }, [])
 
+  // Metadata ready
   const handleMetadataReady = useCallback(
     (payload: { videoInfo: VideoInfo; metadataError?: string }) => {
       setVideoInfo(payload.videoInfo)
@@ -44,13 +88,25 @@ export default function Home() {
       setReferenceInsights(null)
       setAnalysisLoading(!payload.metadataError)
       setScreen("results")
+
+      // Show signup modal after first analysis if not authenticated
+      if (!isAuthenticated && !hasUsedFreeAnalysis) {
+        setHasUsedFreeAnalysis(true)
+        setRemainingAnalyses(0)
+        // Show signup modal after a short delay
+        setTimeout(() => {
+          setShowSignupModal(true)
+        }, 3000)
+      }
     },
-    []
+    [isAuthenticated, hasUsedFreeAnalysis]
   )
 
+  // Reset to start
   const handleReset = useCallback(() => {
-    setScreen("input")
+    setScreen("hero")
     setAnalyzedUrl("")
+    setCompetitorUrl(undefined)
     setVideoInfo(null)
     setMetadataError(undefined)
     setAnalysis(null)
@@ -59,6 +115,17 @@ export default function Home() {
     setReferenceInsights(null)
   }, [])
 
+  // Signup handler
+  const handleSignup = useCallback((method: "google" | "email", email?: string) => {
+    // Demo: simulate successful signup
+    setIsAuthenticated(true)
+    setShowSignupModal(false)
+    // After signup, user gets Pro plan trial with 30 analyses
+    setUserPlan("pro")
+    setRemainingAnalyses(30)
+  }, [])
+
+  // Analysis effect
   useEffect(() => {
     if (screen !== "results") return
     if (!analyzedUrl || !videoInfo) return
@@ -81,6 +148,8 @@ export default function Home() {
             viewCount: videoInfo.views,
             duration: videoInfo.durationSeconds,
             thumbnailUrl: videoInfo.thumbnailUrl,
+            competitorUrl: competitorUrl,
+            mode: selectedMode,
           }),
           signal: ac.signal,
         })
@@ -122,14 +191,33 @@ export default function Home() {
     })()
 
     return () => ac.abort()
-  }, [screen, analyzedUrl, videoInfo, metadataError])
+  }, [screen, analyzedUrl, videoInfo, metadataError, competitorUrl, selectedMode])
+
+  // Render based on current screen
+  if (screen === "hero") {
+    return <HeroSection onGetStarted={handleGetStarted} />
+  }
+
+  if (screen === "mode-selection") {
+    return <ModeSelection onSelectMode={handleSelectMode} onBack={handleBackToHero} />
+  }
+
+  if (screen === "input") {
+    return (
+      <UrlInputScreen
+        onAnalyze={handleAnalyze}
+        onBack={handleBackToModes}
+        mode={selectedMode}
+      />
+    )
+  }
 
   if (screen === "processing") {
     return <ProcessingScreen key={analyzedUrl} url={analyzedUrl} onMetadataReady={handleMetadataReady} />
   }
 
-  if (screen === "results") {
-    return (
+  return (
+    <>
       <ResultsScreen
         videoInfo={videoInfo}
         metadataError={metadataError}
@@ -138,9 +226,15 @@ export default function Home() {
         analysisLoading={analysisLoading}
         referenceInsights={referenceInsights}
         onReset={handleReset}
+        userPlan={userPlan}
+        remainingAnalyses={remainingAnalyses}
+        maxAnalyses={maxAnalyses}
       />
-    )
-  }
-
-  return <UrlInputScreen onAnalyze={handleAnalyze} />
+      <SignupModal
+        isOpen={showSignupModal}
+        onClose={() => setShowSignupModal(false)}
+        onSignup={handleSignup}
+      />
+    </>
+  )
 }
