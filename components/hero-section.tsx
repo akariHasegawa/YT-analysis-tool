@@ -174,9 +174,9 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
       <div className="absolute bottom-12 left-0 right-0 flex justify-center px-4">
         <div className="grid grid-cols-3 gap-6 sm:gap-12">
           {[
-            { value: "12,400+", label: t("hero.stats.analysesLabel") },
-            { value: "4", label: t("hero.stats.patternsLabel"), suffix: t("hero.stats.patternsLabel") },
-            { value: "2", label: t("hero.stats.modesLabel"), suffix: t("hero.stats.modesLabel") },
+            { value: "12,400+", label: t("hero.stat1.label") },
+            { value: "4", label: t("hero.stat2.label") },
+            { value: "2", label: t("hero.stat3.label") },
           ].map((stat, i) => (
             <div key={i} className="text-center">
               <div className="text-2xl font-bold text-[oklch(0.82_0.16_250)] sm:text-3xl">{stat.value}</div>
