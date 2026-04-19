@@ -8,84 +8,115 @@ interface HeroSectionProps {
   onGetStarted: () => void
 }
 
-// Floating particles for background decoration
-function FloatingParticles() {
-  const particles = Array.from({ length: 40 }, (_, i) => ({
-    id: i,
-    size: Math.random() * 4 + 2,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    delay: Math.random() * 8,
-    duration: 8 + Math.random() * 6,
-  }))
-
+// Advanced animated background with SVG and flowing orbs
+function AnimatedBackground() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      {particles.map((p) => (
-        <div
-          key={p.id}
-          className="absolute rounded-full animate-float-particle"
-          style={{
-            width: p.size,
-            height: p.size,
-            left: `${p.x}%`,
-            top: `${p.y}%`,
-            background: `oklch(0.65 0.2 ${260 + Math.random() * 40} / ${0.3 + Math.random() * 0.4})`,
-            animationDelay: `${p.delay}s`,
-            animationDuration: `${p.duration}s`,
-          }}
+      {/* SVG gradient mesh */}
+      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 1000 1000" preserveAspectRatio="none">
+        <defs>
+          <radialGradient id="orb1" cx="50%" cy="50%" r="40%">
+            <stop offset="0%" stopColor="oklch(0.75 0.25 250)" stopOpacity="0.6" />
+            <stop offset="70%" stopColor="oklch(0.45 0.15 260)" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="oklch(0.25 0.05 270)" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="orb2" cx="50%" cy="50%" r="40%">
+            <stop offset="0%" stopColor="oklch(0.72 0.22 290)" stopOpacity="0.5" />
+            <stop offset="70%" stopColor="oklch(0.40 0.12 300)" stopOpacity="0.15" />
+            <stop offset="100%" stopColor="oklch(0.20 0.04 310)" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="orb3" cx="50%" cy="50%" r="40%">
+            <stop offset="0%" stopColor="oklch(0.70 0.20 270)" stopOpacity="0.4" />
+            <stop offset="70%" stopColor="oklch(0.38 0.10 280)" stopOpacity="0.12" />
+            <stop offset="100%" stopColor="oklch(0.18 0.03 290)" stopOpacity="0" />
+          </radialGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="40" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        {/* Animated gradient circles - flowing motion */}
+        <circle
+          cx="20%"
+          cy="30%"
+          r="300"
+          fill="url(#orb1)"
+          filter="url(#glow)"
+          className="animate-flowing-orb-1"
         />
-      ))}
-    </div>
-  )
-}
+        <circle
+          cx="80%"
+          cy="20%"
+          r="280"
+          fill="url(#orb2)"
+          filter="url(#glow)"
+          className="animate-flowing-orb-2"
+        />
+        <circle
+          cx="50%"
+          cy="80%"
+          r="320"
+          fill="url(#orb3)"
+          filter="url(#glow)"
+          className="animate-flowing-orb-3"
+        />
+      </svg>
 
-// Sample video thumbnails for the flowing cards
-const SAMPLE_THUMBNAILS = [
-  { title: "ショート 1", views: "1.2M" },
-  { title: "ショート 2", views: "890K" },
-  { title: "ショート 3", views: "2.1M" },
-  { title: "ショート 4", views: "450K" },
-  { title: "ショート 5", views: "3.4M" },
-  { title: "ショート 6", views: "780K" },
-]
-
-// Flowing video cards background
-function FlowingVideoCards() {
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-[0.28]">
-      <div 
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-        style={{ transform: "translate(-50%, -50%) rotate(-3deg)" }}
-      >
-        {/* Row 1 - scrolling left */}
-        <div className="mb-4 flex gap-4 animate-scroll-left">
-          {[...SAMPLE_THUMBNAILS, ...SAMPLE_THUMBNAILS].map((thumb, i) => (
-            <div
-              key={`row1-${i}`}
-              className="h-36 w-24 flex-shrink-0 rounded-xl bg-gradient-to-br from-[oklch(0.25_0.08_270)] to-[oklch(0.18_0.06_280)] border border-[oklch(0.4_0.1_270_/_0.3)]"
-            />
-          ))}
-        </div>
-        {/* Row 2 - scrolling right */}
-        <div className="mb-4 flex gap-4 animate-scroll-right">
-          {[...SAMPLE_THUMBNAILS, ...SAMPLE_THUMBNAILS].map((thumb, i) => (
-            <div
-              key={`row2-${i}`}
-              className="h-36 w-24 flex-shrink-0 rounded-xl bg-gradient-to-br from-[oklch(0.22_0.08_280)] to-[oklch(0.16_0.06_290)] border border-[oklch(0.4_0.1_280_/_0.3)]"
-            />
-          ))}
-        </div>
-        {/* Row 3 - scrolling left */}
-        <div className="flex gap-4 animate-scroll-left-slow">
-          {[...SAMPLE_THUMBNAILS, ...SAMPLE_THUMBNAILS].map((thumb, i) => (
-            <div
-              key={`row3-${i}`}
-              className="h-36 w-24 flex-shrink-0 rounded-xl bg-gradient-to-br from-[oklch(0.24_0.08_275)] to-[oklch(0.17_0.06_285)] border border-[oklch(0.4_0.1_275_/_0.3)]"
-            />
-          ))}
-        </div>
+      {/* Orbiting particles */}
+      <div className="absolute left-1/4 top-1/3 h-48 w-48">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className={cn(
+              "absolute h-2 w-2 rounded-full",
+              i === 0 && "animate-orbit-particle",
+              i === 1 && "animate-orbit-particle-delayed-1",
+              i === 2 && "animate-orbit-particle-delayed-2"
+            )}
+            style={{
+              background: `oklch(${0.6 + i * 0.08} 0.18 ${240 + i * 30})`,
+              boxShadow: `0 0 12px oklch(${0.6 + i * 0.08} 0.18 ${240 + i * 30} / 0.6)`,
+              left: "50%",
+              top: "50%",
+              marginLeft: "-4px",
+              marginTop: "-4px",
+            }}
+          />
+        ))}
       </div>
+
+      {/* Secondary orbiting particles on right side */}
+      <div className="absolute right-1/4 top-1/2 h-40 w-40">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={`right-${i}`}
+            className={cn(
+              "absolute h-1.5 w-1.5 rounded-full",
+              i === 0 && "animate-orbit-particle",
+              i === 1 && "animate-orbit-particle-delayed-1",
+              i === 2 && "animate-orbit-particle-delayed-2"
+            )}
+            style={{
+              background: `oklch(${0.55 + i * 0.07} 0.16 ${280 + i * 25})`,
+              boxShadow: `0 0 10px oklch(${0.55 + i * 0.07} 0.16 ${280 + i * 25} / 0.5)`,
+              left: "50%",
+              top: "50%",
+              marginLeft: "-3px",
+              marginTop: "-3px",
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Grid overlay - subtle */}
+      <div className="absolute inset-0 neon-grid opacity-20" />
+
+      {/* Gradient overlay to blend edges */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[oklch(0.11_0.05_278)]" />
     </div>
   )
 }
@@ -95,112 +126,65 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
 
   return (
     <main className="relative flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center overflow-hidden px-4 pb-16 pt-8">
-      {/* Background layers */}
-      <FloatingParticles />
-      <FlowingVideoCards />
-      
-      {/* Center gradient overlay for text readability */}
-      <div 
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background: "radial-gradient(ellipse 70% 60% at 50% 50%, oklch(0.08 0.04 280 / 0.95) 0%, transparent 70%)",
-        }}
-      />
+      {/* Advanced animated background */}
+      <AnimatedBackground />
 
-      {/* Content */}
-      <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center text-center">
+      {/* Content container with relative positioning */}
+      <div className="relative z-10 flex flex-col items-center gap-8 sm:gap-10">
         {/* Badge */}
-        <div className="animate-fade-up mb-8">
-          <span className="inline-flex items-center gap-2 rounded-full border border-[oklch(0.55_0.18_270_/_0.4)] bg-[oklch(0.18_0.08_280_/_0.6)] px-4 py-2 text-xs font-medium tracking-wide text-[oklch(0.82_0.14_265)] backdrop-blur-sm sm:text-sm">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[oklch(0.65_0.2_270)] opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-[oklch(0.72_0.18_265)]" />
-            </span>
-            {t("hero.badge") || "AI動画構造分析"}
-          </span>
+        <div className="animate-fade-up">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[oklch(0.5_0.12_270_/_0.3)] bg-[oklch(0.18_0.06_280_/_0.4)] px-4 py-1.5 text-sm font-medium text-[oklch(0.78_0.14_260)]">
+            <div className="h-2 w-2 rounded-full bg-[oklch(0.72_0.2_250)] animate-pulse" />
+            {t("hero.badge")}
+          </div>
         </div>
 
-        {/* Main heading */}
-        <h1 className="animate-fade-up-delay-1 mb-6 font-display text-2xl font-bold leading-[1.35] tracking-tight sm:text-[27px] md:text-3xl">
-          <span className="block text-foreground">{t("hero.title.line1") || "なぜあの動画は伸びて、"}</span>
-          <span 
-            className="mt-1 block"
-            style={{
-              background: "linear-gradient(90deg, oklch(0.72 0.16 250), oklch(0.75 0.2 290))",
-              WebkitBackgroundClip: "text",
-              backgroundClip: "text",
-              color: "transparent",
-            }}
-          >
-            {t("hero.title.line2") || "あなたの動画は伸びないのか。"}
-          </span>
-        </h1>
+        {/* Main headline - gradient text */}
+        <div className="animate-fade-up-delay-1 space-y-2 text-center">
+          <h1 className="font-display text-5xl font-bold leading-tight tracking-tight text-neon-hero sm:text-6xl md:text-7xl">
+            <span>{t("hero.title.line1")}</span>
+            <br />
+            <span>{t("hero.title.line2")}</span>
+          </h1>
+        </div>
 
         {/* Subheadline */}
-        <p className="animate-fade-up-delay-2 mb-10 text-sm text-muted-foreground sm:text-[15px]">
-          {t("hero.subheadline") || "感覚でやめて、構造で作れ。"}
+        <p className="animate-fade-up-delay-2 max-w-2xl text-center text-xl font-semibold text-neon-accent sm:text-2xl">
+          {t("hero.subheadline")}
         </p>
 
-        {/* CTA Button */}
-        <div className="animate-fade-up-delay-3 flex flex-col items-center gap-3">
-          <button
-            type="button"
-            onClick={onGetStarted}
-            className={cn(
-              "group relative flex items-center gap-2 rounded-xl px-8 py-3.5 text-base font-semibold text-white transition-all",
-              "bg-gradient-to-r from-[oklch(0.55_0.2_260)] to-[oklch(0.52_0.22_285)]",
-              "hover:shadow-[0_8px_32px_oklch(0.5_0.2_270_/_0.4)] hover:-translate-y-0.5",
-              "animate-pulse-glow"
-            )}
-          >
-            {t("hero.cta") || "無料で分析してみる"}
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </button>
-          <span className="text-[11px] text-white/70">
-            {t("hero.ctaNote") || "初回1回無料"}
+        {/* CTA Button with pulse glow */}
+        <button
+          type="button"
+          onClick={onGetStarted}
+          className="animate-fade-up-delay-3 neon-button animate-pulse-glow group relative rounded-xl px-8 py-4 font-semibold transition-all duration-300 sm:px-10 sm:py-5"
+        >
+          <span className="flex items-center gap-2">
+            {t("hero.cta")}
+            <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
           </span>
-        </div>
+        </button>
 
-        {/* Stats */}
-        <div className="animate-fade-up-delay-4 mt-16 flex items-center gap-6 sm:gap-10">
-          <StatItem 
-            value="12,400+" 
-            label={t("hero.stat1.label") || "分析動画数"} 
-          />
-          <div className="h-10 w-px bg-[oklch(0.5_0.1_270_/_0.3)]" />
-          <StatItem 
-            value="4" 
-            label={t("hero.stat2.label") || "プロンプト生成"} 
-            suffix={t("hero.stat2.suffix") || "パターン"}
-          />
-          <div className="h-10 w-px bg-[oklch(0.5_0.1_270_/_0.3)]" />
-          <StatItem 
-            value="2" 
-            label={t("hero.stat3.label") || "対応モード"} 
-            suffix={t("hero.stat3.suffix") || "種類"}
-          />
+        <p className="animate-fade-up-delay-4 text-sm text-[oklch(0.65_0.08_270)]">
+          {t("hero.ctaNote")}
+        </p>
+      </div>
+
+      {/* Stats section - floating effect */}
+      <div className="absolute bottom-12 left-0 right-0 flex justify-center px-4">
+        <div className="grid grid-cols-3 gap-6 sm:gap-12">
+          {[
+            { value: "12,400+", label: t("hero.stats.analysesLabel") },
+            { value: "4", label: t("hero.stats.patternsLabel"), suffix: t("hero.stats.patternsLabel") },
+            { value: "2", label: t("hero.stats.modesLabel"), suffix: t("hero.stats.modesLabel") },
+          ].map((stat, i) => (
+            <div key={i} className="text-center">
+              <div className="text-2xl font-bold text-[oklch(0.82_0.16_250)] sm:text-3xl">{stat.value}</div>
+              <div className="text-xs text-[oklch(0.65_0.08_270)] sm:text-sm">{stat.label}</div>
+            </div>
+          ))}
         </div>
       </div>
     </main>
-  )
-}
-
-function StatItem({ 
-  value, 
-  label, 
-  suffix 
-}: { 
-  value: string
-  label: string
-  suffix?: string 
-}) {
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="flex items-baseline gap-1">
-        <span className="font-display text-xl font-bold text-foreground sm:text-2xl">{value}</span>
-        {suffix && <span className="text-xs text-muted-foreground">{suffix}</span>}
-      </div>
-      <span className="text-[10px] text-muted-foreground sm:text-xs">{label}</span>
-    </div>
   )
 }
