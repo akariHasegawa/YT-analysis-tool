@@ -173,16 +173,18 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
       {/* Stats section - absolute bottom positioning */}
       <div className="absolute bottom-8 left-0 right-0 z-10 flex justify-center px-4">
         <div className="grid grid-cols-3 gap-6 sm:gap-12">
-          {[
-            { value: "12,400+", label: t("hero.stat1.label") },
-            { value: "4", label: t("hero.stat2.label") },
-            { value: "2", label: t("hero.stat3.label") },
-          ].map((stat, i) => (
-            <div key={i} className="text-center">
-              <div className="text-xl font-bold text-[oklch(0.82_0.16_250)] sm:text-2xl">{stat.value}</div>
-              <div className="text-xs text-[oklch(0.65_0.08_270)]">{stat.label}</div>
-            </div>
-          ))}
+          <div className="text-center">
+            <div className="text-xl font-bold text-[oklch(0.82_0.16_250)] sm:text-2xl">12,400+</div>
+            <div className="text-xs text-[oklch(0.65_0.08_270)]">{t("hero.stat1.label")}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xl font-bold text-[oklch(0.82_0.16_250)] sm:text-2xl">4</div>
+            <div className="text-xs text-[oklch(0.65_0.08_270)]">{t("hero.stat2.label")}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xl font-bold text-[oklch(0.82_0.16_250)] sm:text-2xl">2</div>
+            <div className="text-xs text-[oklch(0.65_0.08_270)]">{t("hero.stat3.label")}</div>
+          </div>
         </div>
       </div>
     </main>
