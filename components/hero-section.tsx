@@ -125,12 +125,12 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
   const { t } = useLanguage()
 
   return (
-    <main className="relative flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center overflow-hidden px-4 pb-16 pt-8">
+    <main className="relative flex min-h-screen flex-col items-center justify-between overflow-hidden px-4 py-12">
       {/* Advanced animated background */}
       <AnimatedBackground />
 
       {/* Content container with relative positioning */}
-      <div className="relative z-10 flex flex-col items-center gap-8 sm:gap-10">
+      <div className="relative z-10 flex flex-col items-center gap-6 sm:gap-8">
         {/* Badge */}
         <div className="animate-fade-up">
           <div className="inline-flex items-center gap-2 rounded-full border border-[oklch(0.5_0.12_270_/_0.3)] bg-[oklch(0.18_0.06_280_/_0.4)] px-4 py-1.5 text-sm font-medium text-[oklch(0.78_0.14_260)]">
@@ -140,8 +140,8 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
         </div>
 
         {/* Main headline - gradient text */}
-        <div className="animate-fade-up-delay-1 space-y-2 text-center">
-          <h1 className="font-display text-5xl font-bold leading-tight tracking-tight text-neon-hero sm:text-6xl md:text-7xl">
+        <div className="animate-fade-up-delay-1 space-y-1 text-center">
+          <h1 className="font-display text-3xl font-bold leading-snug tracking-tight text-neon-hero sm:text-4xl md:text-5xl lg:text-6xl">
             <span>{t("hero.title.line1")}</span>
             <br />
             <span>{t("hero.title.line2")}</span>
@@ -149,7 +149,7 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
         </div>
 
         {/* Subheadline */}
-        <p className="animate-fade-up-delay-2 max-w-2xl text-center text-xl font-semibold text-neon-accent sm:text-2xl">
+        <p className="animate-fade-up-delay-2 text-center text-lg font-semibold text-neon-accent sm:text-xl">
           {t("hero.subheadline")}
         </p>
 
@@ -157,21 +157,21 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
         <button
           type="button"
           onClick={onGetStarted}
-          className="animate-fade-up-delay-3 neon-button animate-pulse-glow group relative rounded-xl px-8 py-4 font-semibold transition-all duration-300 sm:px-10 sm:py-5"
+          className="animate-fade-up-delay-3 neon-button animate-pulse-glow group relative rounded-xl px-6 py-3 text-base font-semibold transition-all duration-300 sm:px-8 sm:py-4"
         >
           <span className="flex items-center gap-2">
             {t("hero.cta")}
-            <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </span>
         </button>
 
-        <p className="animate-fade-up-delay-4 text-sm text-[oklch(0.65_0.08_270)]">
+        <p className="animate-fade-up-delay-4 text-xs text-[oklch(0.65_0.08_270)] sm:text-sm">
           {t("hero.ctaNote")}
         </p>
       </div>
 
-      {/* Stats section - floating effect */}
-      <div className="absolute bottom-12 left-0 right-0 flex justify-center px-4">
+      {/* Stats section - at bottom */}
+      <div className="relative z-10 flex justify-center px-4">
         <div className="grid grid-cols-3 gap-6 sm:gap-12">
           {[
             { value: "12,400+", label: t("hero.stat1.label") },
@@ -179,8 +179,8 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
             { value: "2", label: t("hero.stat3.label") },
           ].map((stat, i) => (
             <div key={i} className="text-center">
-              <div className="text-2xl font-bold text-[oklch(0.82_0.16_250)] sm:text-3xl">{stat.value}</div>
-              <div className="text-xs text-[oklch(0.65_0.08_270)] sm:text-sm">{stat.label}</div>
+              <div className="text-xl font-bold text-[oklch(0.82_0.16_250)] sm:text-2xl">{stat.value}</div>
+              <div className="text-xs text-[oklch(0.65_0.08_270)]">{stat.label}</div>
             </div>
           ))}
         </div>
