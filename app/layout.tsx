@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Noto_Sans_JP } from 'next/font/google'
+import { Noto_Sans_JP, Syne } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { LanguageProvider } from '@/lib/language-context'
 import { Header } from '@/components/header'
@@ -10,6 +10,13 @@ const notoSansJp = Noto_Sans_JP({
   weight: ['400', '500', '600', '700'],
   subsets: ['latin'],
   variable: '--font-sans-jp',
+  display: 'swap',
+})
+
+const syne = Syne({
+  weight: ['400', '500', '600', '700', '800'],
+  subsets: ['latin'],
+  variable: '--font-syne',
   display: 'swap',
 })
 
@@ -43,7 +50,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" className="dark">
-      <body className={`${notoSansJp.variable} font-sans min-h-screen antialiased`}>
+      <body className={`${notoSansJp.variable} ${syne.variable} font-sans min-h-screen antialiased`}>
         <LanguageProvider>
           <NeonBackground />
           <Header />
