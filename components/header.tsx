@@ -1,24 +1,41 @@
 'use client'
 
-import { LanguageSwitcher } from '@/components/language-switcher'
 import { useLanguage } from '@/lib/language-context'
 
-export function Header() {
+interface HeaderProps {
+  onPricingClick?: () => void
+  onGetStartedClick?: () => void
+}
+
+export function Header({ onPricingClick, onGetStartedClick }: HeaderProps) {
   const { t } = useLanguage()
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[oklch(0.55_0.12_270_/_0.18)] bg-[oklch(0.12_0.05_280_/_0.65)] backdrop-blur-xl supports-[backdrop-filter]:bg-[oklch(0.12_0.05_280_/_0.45)]">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-50 border-b border-[rgba(99,102,241,0.1)] bg-[#060810] backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        {/* Left: Logo + Title */}
         <div className="flex items-center gap-3">
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[oklch(0.62_0.2_250)] to-[oklch(0.48_0.22_300)] text-[10px] font-bold tracking-tight text-[oklch(0.98_0.01_250)] shadow-[0_0_20px_oklch(0.55_0.2_270_/_0.45)]"
-            aria-hidden
-          >
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#6366f1] to-[#8b5cf6] text-[11px] font-bold text-white shadow-[0_0_20px_rgba(99,102,241,0.5)]">
             AI
           </div>
-          <h1 className="text-base font-semibold tracking-tight text-foreground sm:text-lg">{t('header.title')}</h1>
+          <h1 className="text-sm font-semibold text-white sm:text-base">バズ構造分析</h1>
         </div>
-        <LanguageSwitcher />
+
+        {/* Center: Pricing Link */}
+        <button
+          onClick={onPricingClick}
+          className="text-sm text-gray-400 transition-colors hover:text-white"
+        >
+          料金プラン
+        </button>
+
+        {/* Right: Get Started Button */}
+        <button
+          onClick={onGetStartedClick}
+          className="rounded-full bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-6 py-2 text-sm font-semibold text-white transition-all hover:shadow-lg hover:shadow-[rgba(99,102,241,0.4)]"
+        >
+          無料で試す
+        </button>
       </div>
     </header>
   )
