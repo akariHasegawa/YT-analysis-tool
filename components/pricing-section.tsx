@@ -1,35 +1,12 @@
 'use client'
 
 import { Check } from 'lucide-react'
-import { useRef, useState } from 'react'
 
 interface PricingProps {
   onPlanSelect: (plan: string) => void
 }
 
 export function PricingSection({ onPlanSelect }: PricingProps) {
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(true)
-
-  const handleScroll = () => {
-    if (scrollContainerRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current
-      setCanScrollLeft(scrollLeft > 0)
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10)
-    }
-  }
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollContainerRef.current) {
-      const scrollAmount = 400
-      scrollContainerRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth',
-      })
-    }
-  }
-
   return (
     <section id="pricing" className="flex flex-col items-center justify-center px-4 py-20 sm:py-32">
       {/* Header */}
@@ -45,8 +22,6 @@ export function PricingSection({ onPlanSelect }: PricingProps) {
       <div className="relative w-full max-w-6xl">
         {/* Scroll Container */}
         <div
-          ref={scrollContainerRef}
-          onScroll={handleScroll}
           className="flex gap-6 justify-center"
           style={{ scrollBehavior: 'smooth' }}
         >
@@ -141,11 +116,6 @@ export function PricingSection({ onPlanSelect }: PricingProps) {
               Businessを始める
             </button>
           </div>
-        </div>
-
-        {/* Scroll Info */}
-        <div className="mt-6 text-center text-xs text-gray-500">
-          {canScrollLeft || canScrollRight ? '← スワイプで切り替え →' : ''}
         </div>
       </div>
     </section>
