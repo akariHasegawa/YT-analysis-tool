@@ -10,10 +10,10 @@ export function PricingSection({ onPlanSelect }: PricingProps) {
   return (
     <section id="pricing" className="flex flex-col items-center justify-center px-4 py-20 sm:py-32">
       {/* Header */}
-      <div className="mb-12 text-center">
+      <div className="mb-6 text-center">
         <div className="mb-2 text-xs font-bold uppercase tracking-wider text-[#6366f1]">PRICING</div>
         <h2 className="font-display text-3xl font-bold text-white sm:text-4xl">シンプルな料金プラン</h2>
-        <p className="mt-4 text-sm text-gray-400 sm:text-base">
+        <p className="mt-3 text-sm text-gray-400 sm:text-base">
           まず無料で試して、必要になったらアップグレード。
         </p>
       </div>
