@@ -8,7 +8,7 @@ interface PricingProps {
 
 export function PricingSection({ onPlanSelect }: PricingProps) {
   return (
-    <section id="pricing" className="flex flex-col items-center justify-center px-4 py-20 sm:py-32">
+    <section id="pricing" className="flex flex-col items-center justify-center px-4 py-16 sm:py-24">
       {/* Header */}
       <div className="mb-6 text-center">
         <div className="mb-2 text-xs font-bold uppercase tracking-wider text-[#6366f1]">PRICING</div>
