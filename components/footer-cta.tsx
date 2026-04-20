@@ -9,7 +9,7 @@ interface FooterCTAProps {
 export function FooterCTA({ onGetStarted }: FooterCTAProps) {
   return (
     <section className="flex flex-col items-center justify-center px-4 py-10 sm:py-16 text-center">
-      <h2 className="font-display text-2xl font-bold text-white sm:text-3xl">
+      <h2 className="font-display whitespace-nowrap text-xl font-bold text-white sm:text-3xl">
         まずは無料で試してみてください。
       </h2>
       <p className="mt-4 text-sm text-gray-400 sm:text-base">
