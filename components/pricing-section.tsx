@@ -20,13 +20,11 @@ export function PricingSection({ onPlanSelect }: PricingProps) {
 
       {/* Pricing Cards Container */}
       <div className="relative w-full max-w-6xl">
-        {/* Scroll Container */}
-        <div
-          className="flex gap-6 justify-center"
-          style={{ scrollBehavior: 'smooth' }}
-        >
+        {/* PC: centered flex / Mobile: horizontal scroll */}
+        <div className="flex gap-6 overflow-x-auto pb-2 sm:justify-center sm:overflow-x-visible sm:pb-0">
+
           {/* FREE Card */}
-          <div className="w-full max-w-sm rounded-2xl border border-gray-600 bg-[#0f1117] p-8">
+          <div className="w-[80vw] max-w-sm flex-shrink-0 rounded-2xl border border-gray-600 bg-[#0f1117] p-8 sm:w-full">
             <div className="mb-4 inline-block rounded-lg bg-gray-700 px-3 py-1 text-xs font-bold text-gray-200">
               FREE
             </div>
@@ -51,7 +49,7 @@ export function PricingSection({ onPlanSelect }: PricingProps) {
           </div>
 
           {/* PRO Card */}
-          <div className="w-full max-w-sm rounded-2xl border-2 border-[#6366f1] bg-[#0f1117] p-8">
+          <div className="w-[80vw] max-w-sm flex-shrink-0 rounded-2xl border-2 border-[#6366f1] bg-[#0f1117] p-8 sm:w-full">
             <div className="mb-4 inline-block rounded-lg bg-[#6366f1] px-3 py-1 text-xs font-bold text-white">
               PRO
             </div>
@@ -79,7 +77,7 @@ export function PricingSection({ onPlanSelect }: PricingProps) {
           </div>
 
           {/* BUSINESS Card */}
-          <div className="w-full max-w-sm rounded-2xl border border-[#f59e0b] bg-[#0f1117] p-8">
+          <div className="w-[80vw] max-w-sm flex-shrink-0 rounded-2xl border border-[#f59e0b] bg-[#0f1117] p-8 sm:w-full">
             <div className="mb-4 inline-block rounded-lg bg-[#f59e0b] px-3 py-1 text-xs font-bold text-black">
               BUSINESS
             </div>

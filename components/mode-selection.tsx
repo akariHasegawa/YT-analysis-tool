@@ -38,9 +38,9 @@ const MODES = [
     borderHover: "oklch(0.65 0.18 55 / 0.5)",
     bgHover: "oklch(0.2 0.08 55 / 0.35)",
     titleKey: "mode.growth.title",
-    titleFallback: "バズりたい",
+    titleFallback: "Growth",
     descKey: "mode.growth.desc",
-    descFallback: "自分の動画URLを入力 → 改善点と次回作を提案",
+    descFallback: "あなたの動画を伸ばす設計を",
     tags: [
       { key: "mode.growth.tag1", fallback: "改善提案" },
       { key: "mode.growth.tag2", fallback: "競合比較" },
