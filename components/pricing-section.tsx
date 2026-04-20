@@ -47,11 +47,11 @@ export function PricingSection({ onPlanSelect }: PricingProps) {
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="flex gap-6 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-4"
+          className="flex gap-6 justify-center"
           style={{ scrollBehavior: 'smooth' }}
         >
           {/* FREE Card */}
-          <div className="min-w-[85%] max-w-sm snap-start rounded-2xl border border-gray-600 bg-[#0f1117] p-8">
+          <div className="w-full max-w-sm rounded-2xl border border-gray-600 bg-[#0f1117] p-8">
             <div className="mb-4 inline-block rounded-lg bg-gray-700 px-3 py-1 text-xs font-bold text-gray-200">
               FREE
             </div>
@@ -75,13 +75,8 @@ export function PricingSection({ onPlanSelect }: PricingProps) {
             </button>
           </div>
 
-          {/* PRO Card (Recommended) */}
-          <div className="min-w-[85%] max-w-sm snap-start rounded-2xl border-2 border-[#6366f1] bg-[#0f1117] p-8 relative">
-            {/* Recommended Badge */}
-            <div className="absolute -top-3 left-8 inline-block rounded-full bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-4 py-1 text-xs font-bold text-white">
-              おすすめ
-            </div>
-
+          {/* PRO Card */}
+          <div className="w-full max-w-sm rounded-2xl border-2 border-[#6366f1] bg-[#0f1117] p-8">
             <div className="mb-4 inline-block rounded-lg bg-[#6366f1] px-3 py-1 text-xs font-bold text-white">
               PRO
             </div>
@@ -109,7 +104,7 @@ export function PricingSection({ onPlanSelect }: PricingProps) {
           </div>
 
           {/* BUSINESS Card */}
-          <div className="min-w-[85%] max-w-sm snap-start rounded-2xl border border-[#f59e0b] bg-[#0f1117] p-8">
+          <div className="w-full max-w-sm rounded-2xl border border-[#f59e0b] bg-[#0f1117] p-8">
             <div className="mb-4 inline-block rounded-lg bg-[#f59e0b] px-3 py-1 text-xs font-bold text-black">
               BUSINESS
             </div>
