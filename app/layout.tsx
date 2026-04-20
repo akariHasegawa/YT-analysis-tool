@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import { Noto_Sans_JP, Syne } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { LanguageProvider } from '@/lib/language-context'
-import { SupabaseAuthProvider } from '@/components/supabase-auth-provider'
+import { Header } from '@/components/header'
+import { NeonBackground } from '@/components/neon-background'
 import './globals.css'
 
 const notoSansJp = Noto_Sans_JP({
@@ -51,10 +52,8 @@ export default function RootLayout({
     <html lang="ja" className="dark">
       <body className={`${notoSansJp.variable} ${syne.variable} font-sans min-h-screen antialiased bg-[#060810]`}>
         <LanguageProvider>
-          <SupabaseAuthProvider>
-            {children}
-            <Analytics />
-          </SupabaseAuthProvider>
+          {children}
+          <Analytics />
         </LanguageProvider>
       </body>
     </html>

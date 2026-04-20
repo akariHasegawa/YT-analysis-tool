@@ -14,8 +14,6 @@ import type { ShortsAnalysis } from "@/lib/shorts-analysis"
 import type { ReferenceInsightsPayload } from "@/lib/reference-insights"
 import type { VideoInfo } from "@/lib/video-info"
 import type { PlanType } from "@/components/upgrade-modal"
-import { useSupabaseAuth } from "@/components/supabase-auth-provider"
-import { effectiveMonthlyCount, remainingAnalysesForPlan, type UserUsageRow } from "@/lib/analysis-usage"
 import { useLanguage } from "@/lib/language-context"
 
 type Screen = "landing" | "mode-selection" | "input" | "processing" | "results"
@@ -39,43 +37,12 @@ export default function Home() {
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [referenceInsights, setReferenceInsights] = useState<ReferenceInsightsPayload | null>(null)
 
-  const { session, refreshSession, supabase } = useSupabaseAuth()
-
-  const sessionRef = useRef(session)
-  sessionRef.current = session
-  const supabaseRef = useRef(supabase)
-  supabaseRef.current = supabase
-
+  // Auth & plan state
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [userPlan, setUserPlan] = useState<PlanType>("free")
   const [remainingAnalyses, setRemainingAnalyses] = useState(1)
-  /** 同じ URL の分析に対して、結果表示後の登録モーダルを二重に出さない */
-  const postAnalysisSignupPromptedUrlRef = useRef<string | null>(null)
-
-  useEffect(() => {
-    if (!supabase || !session) {
-      setUserPlan("free")
-      setRemainingAnalyses(1)
-      setIsAuthenticated(false)
-      return
-    }
-    void supabase
-      .from("users")
-      .select("plan, analysis_count_total, analysis_count_month, usage_month")
-      .eq("id", session.user.id)
-      .single()
-      .then(({ data, error }) => {
-        if (error || !data) return
-        const row = data as UserUsageRow
-        const plan = row.plan as PlanType
-        setUserPlan(plan)
-        const eff = effectiveMonthlyCount(row)
-        setRemainingAnalyses(remainingAnalysesForPlan(plan, row.analysis_count_total ?? 0, eff))
-        const isAnon = Boolean((session.user as { is_anonymous?: boolean }).is_anonymous)
-        setIsAuthenticated(!isAnon)
-      })
-  }, [supabase, session])
+  const [hasUsedFreeAnalysis, setHasUsedFreeAnalysis] = useState(false)
 
   const maxAnalyses = userPlan === "business" ? 100 : userPlan === "pro" ? 30 : 1
 
@@ -132,8 +99,16 @@ export default function Home() {
       setReferenceInsights(null)
       setAnalysisLoading(!payload.metadataError)
       setScreen("results")
+
+      if (!isAuthenticated && !hasUsedFreeAnalysis) {
+        setHasUsedFreeAnalysis(true)
+        setRemainingAnalyses(0)
+        setTimeout(() => {
+          setShowSignupModal(true)
+        }, 3000)
+      }
     },
-    []
+    [isAuthenticated, hasUsedFreeAnalysis]
   )
 
   const handleReset = useCallback(() => {
@@ -146,15 +121,15 @@ export default function Home() {
     setAnalysisError(undefined)
     setAnalysisLoading(false)
     setReferenceInsights(null)
-    postAnalysisSignupPromptedUrlRef.current = null
   }, [])
 
-  const handleAuthSuccess = useCallback(() => {
+  const handleSignup = useCallback((method: "google" | "email", email?: string) => {
+    setIsAuthenticated(true)
     setShowSignupModal(false)
-    void refreshSession()
-  }, [refreshSession])
+    setUserPlan("pro")
+    setRemainingAnalyses(30)
+  }, [])
 
-  // Analysis effect（セッションなしでもゲスト1回まで API 側で許可。Authorization は任意）
   useEffect(() => {
     if (screen !== "results") return
     if (!analyzedUrl || !videoInfo) return
@@ -166,14 +141,9 @@ export default function Home() {
 
     ;(async () => {
       try {
-        const s = sessionRef.current
-        const headers: Record<string, string> = { "Content-Type": "application/json" }
-        const token = s?.access_token
-        if (token) headers.Authorization = `Bearer ${token}`
-
         const res = await fetch("/api/analyze", {
           method: "POST",
-          headers,
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             url: analyzedUrl,
             title: videoInfo.title,
@@ -190,40 +160,15 @@ export default function Home() {
         const data = (await res.json()) as {
           analysis?: ShortsAnalysis
           referenceInsights?: ReferenceInsightsPayload
-          usage?: Pick<UserUsageRow, "plan" | "analysis_count_total" | "analysis_count_month" | "usage_month">
           error?: string
-          plan?: string
-          message?: string
         }
         if (ac.signal.aborted) return
         if (!res.ok) {
           setAnalysis(null)
           setReferenceInsights(null)
-          if (data.error === "LIMIT_EXCEEDED") {
-            setAnalysisError(
-              tRef.current("processing.error.limitExceeded") ||
-                `分析回数の上限に達しました（プラン: ${data.plan ?? "unknown"}）`
-            )
-          } else if (data.error === "UNAUTHORIZED") {
-            setAnalysisError(tRef.current("processing.error.unauthorized") || "認証に失敗しました。再度ログインしてください。")
-          } else if (data.error === "SUPABASE_NOT_CONFIGURED") {
-            setAnalysisError(
-              typeof data.message === "string"
-                ? data.message
-                : tRef.current("processing.error.supabase") || "Supabase が未設定です。"
-            )
-          } else if (data.error === "OPENAI_RATE_LIMIT" || res.status === 429) {
-            setAnalysisError(
-              typeof data.message === "string"
-                ? data.message
-                : tRef.current("processing.error.openaiRateLimit") ||
-                    "OpenAI のレート制限に達しました。しばらく待ってから再度お試しください。"
-            )
-          } else {
-            setAnalysisError(
-              typeof data.error === "string" ? data.error : tRef.current("processing.error.analyzeFailed")
-            )
-          }
+          setAnalysisError(
+            typeof data.error === "string" ? data.error : tRef.current("processing.error.analyzeFailed")
+          )
           return
         }
         if (data.analysis) {
@@ -234,39 +179,6 @@ export default function Home() {
               enrichedImprovements: [],
             }
           )
-          const s2 = sessionRef.current
-          const isRegistered = Boolean(
-            s2?.user && !(s2.user as { is_anonymous?: boolean }).is_anonymous
-          )
-          if (!isRegistered && postAnalysisSignupPromptedUrlRef.current !== analyzedUrl) {
-            postAnalysisSignupPromptedUrlRef.current = analyzedUrl
-            window.setTimeout(() => {
-              setShowSignupModal(true)
-            }, 2800)
-          }
-          if (data.usage) {
-            const u = data.usage as UserUsageRow
-            const plan = u.plan as PlanType
-            setUserPlan(plan)
-            const eff = effectiveMonthlyCount(u)
-            setRemainingAnalyses(remainingAnalysesForPlan(plan, u.analysis_count_total ?? 0, eff))
-          } else {
-            const sb = supabaseRef.current
-            if (sb && s2?.user) {
-              const { data: row } = await sb
-                .from("users")
-                .select("plan, analysis_count_total, analysis_count_month, usage_month")
-                .eq("id", s2.user.id)
-                .single()
-              if (row) {
-                const u = row as UserUsageRow
-                const plan = u.plan as PlanType
-                setUserPlan(plan)
-                const eff = effectiveMonthlyCount(u)
-                setRemainingAnalyses(remainingAnalysesForPlan(plan, u.analysis_count_total ?? 0, eff))
-              }
-            }
-          }
         } else {
           setAnalysis(null)
           setReferenceInsights(null)
@@ -329,13 +241,11 @@ export default function Home() {
         userPlan={userPlan}
         remainingAnalyses={remainingAnalyses}
         maxAnalyses={maxAnalyses}
-        analysisMode={selectedMode}
-        hadCompetitorUrl={Boolean(competitorUrl?.trim())}
       />
       <SignupModal
         isOpen={showSignupModal}
         onClose={() => setShowSignupModal(false)}
-        onAuthSuccess={handleAuthSuccess}
+        onSignup={handleSignup}
       />
     </>
   )
