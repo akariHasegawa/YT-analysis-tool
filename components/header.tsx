@@ -21,21 +21,21 @@ export function Header({ onPricingClick, onGetStartedClick }: HeaderProps) {
           <h1 className="text-sm font-semibold text-white sm:text-base">バズ構造分析</h1>
         </div>
 
-        {/* Center: Pricing Link */}
-        <button
-          onClick={onPricingClick}
-          className="text-sm text-gray-400 transition-colors hover:text-white"
-        >
-          料金プラン
-        </button>
-
-        {/* Right: Get Started Button */}
-        <button
-          onClick={onGetStartedClick}
-          className="rounded-full bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-6 py-2 text-sm font-semibold text-white transition-all hover:shadow-lg hover:shadow-[rgba(99,102,241,0.4)]"
-        >
-          無料で試す
-        </button>
+        {/* Right: Pricing Link + Get Started Button */}
+        <div className="flex items-center gap-6">
+          <button
+            onClick={onPricingClick}
+            className="text-sm text-gray-400 transition-colors hover:text-white"
+          >
+            料金プラン
+          </button>
+          <button
+            onClick={onGetStartedClick}
+            className="rounded-full bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-6 py-2 text-sm font-semibold text-white transition-all hover:shadow-lg hover:shadow-[rgba(99,102,241,0.4)]"
+          >
+            無料で試す
+          </button>
+        </div>
       </div>
     </header>
   )

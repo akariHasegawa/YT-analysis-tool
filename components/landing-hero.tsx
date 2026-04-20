@@ -9,13 +9,6 @@ interface LandingHeroProps {
 export function LandingHero({ onGetStarted }: LandingHeroProps) {
   return (
     <section className="relative flex flex-col items-center justify-center px-4 py-20 sm:py-32">
-      {/* Top right: Pricing Link */}
-      <div className="mb-8 w-full flex justify-end">
-        <a href="#pricing" className="text-sm text-gray-400 transition-colors hover:text-white">
-          料金プラン
-        </a>
-      </div>
-
       {/* Badge */}
       <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-[rgba(99,102,241,0.3)] bg-[rgba(99,102,241,0.05)] px-4 py-1.5">
         <div className="h-2 w-2 rounded-full bg-[#6366f1] animate-pulse" />
