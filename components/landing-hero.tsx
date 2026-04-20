@@ -53,7 +53,7 @@ export function LandingHero({ onGetStarted }: LandingHeroProps) {
         {/* Growth Mode */}
         <div className="flex-1 border border-l-0 border-[#f59e0b] rounded-r-lg bg-transparent px-6 py-4 sm:px-8 sm:py-5">
           <div className="mb-2 text-xs font-bold uppercase tracking-wider text-[#f59e0b]">Growth</div>
-          <p className="text-sm text-gray-300 sm:text-base">あなたの動画を伸ばす設計を</p>
+          <p className="whitespace-nowrap text-sm text-gray-300 sm:text-base">あなたの動画を伸ばす設計を</p>
         </div>
       </div>
     </section>
