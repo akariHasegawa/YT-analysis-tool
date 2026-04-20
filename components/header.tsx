@@ -19,7 +19,7 @@ export function Header({ onPricingClick, onGetStartedClick }: HeaderProps) {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#6366f1] to-[#8b5cf6] text-[11px] font-bold text-white shadow-[0_0_20px_rgba(99,102,241,0.5)]">
             AI
           </div>
-          <h1 className="text-sm font-semibold text-white sm:text-base">バズ構造分析</h1>
+          <h1 className="text-sm font-semibold text-white sm:text-base">{t('header.title')}</h1>
         </div>
 
         {/* Right: Language Switcher + Menu */}
@@ -33,13 +33,13 @@ export function Header({ onPricingClick, onGetStartedClick }: HeaderProps) {
               onClick={onPricingClick}
               className="text-sm text-gray-400 transition-colors hover:text-white"
             >
-              料金プラン
+              {t('header.pricing')}
             </button>
             <button
               onClick={onGetStartedClick}
               className="rounded-full bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-6 py-2 text-sm font-semibold text-white transition-all hover:shadow-lg hover:shadow-[rgba(99,102,241,0.4)]"
             >
-              無料で試す
+              {t('header.trial')}
             </button>
           </div>
         </div>
