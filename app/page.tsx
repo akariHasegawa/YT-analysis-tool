@@ -201,7 +201,7 @@ export default function Home() {
     return (
       <>
         <Header onPricingClick={handlePricingClick} onGetStartedClick={handleGetStarted} />
-        <main className="min-h-screen bg-[#060810]">
+        <main className="bg-[#060810]">
           <LandingHero onGetStarted={handleGetStarted} />
           <PricingSection onPlanSelect={handlePlanSelect} />
           <FooterCTA onGetStarted={handleGetStarted} />
