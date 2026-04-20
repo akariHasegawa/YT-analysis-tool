@@ -16,10 +16,10 @@ export function LandingHero({ onGetStarted }: LandingHeroProps) {
       </div>
 
       {/* Main Headline */}
-      <h1 className="font-display max-w-4xl text-center text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
-        <span className="text-white">なぜあの動画は伸びて、</span>
+      <h1 className="font-display max-w-4xl text-center text-2xl font-bold leading-tight sm:text-4xl md:text-5xl lg:text-6xl">
+        <span className="whitespace-nowrap text-white">なぜあの動画は伸びて、</span>
         <br />
-        <span className="bg-gradient-to-r from-[#818cf8] to-[#c084fc] bg-clip-text text-transparent">
+        <span className="whitespace-nowrap bg-gradient-to-r from-[#818cf8] to-[#c084fc] bg-clip-text text-transparent">
           あなたの動画は伸びないのか。
         </span>
       </h1>
@@ -45,15 +45,21 @@ export function LandingHero({ onGetStarted }: LandingHeroProps) {
       {/* Mode Badges */}
       <div className="mt-12 flex gap-0 rounded-lg overflow-hidden">
         {/* Research Mode */}
-        <div className="flex-1 border border-r-0 border-[#6366f1] rounded-l-lg bg-transparent px-6 py-4 sm:px-8 sm:py-5">
+        <div className="flex-1 border border-r-0 border-[#6366f1] rounded-l-lg bg-transparent px-4 py-4 sm:px-8 sm:py-5">
           <div className="mb-2 text-xs font-bold uppercase tracking-wider text-[#6366f1]">Research</div>
-          <p className="text-sm text-gray-300 sm:text-base">バズ動画の構造を読み解く</p>
+          <p className="text-sm text-gray-300 sm:text-base sm:whitespace-nowrap">
+            <span className="sm:hidden">バズ動画の構造を<br />読み解く</span>
+            <span className="hidden sm:inline">バズ動画の構造を読み解く</span>
+          </p>
         </div>
 
         {/* Growth Mode */}
-        <div className="flex-1 border border-l-0 border-[#f59e0b] rounded-r-lg bg-transparent px-6 py-4 sm:px-8 sm:py-5">
+        <div className="flex-1 border border-l-0 border-[#f59e0b] rounded-r-lg bg-transparent px-4 py-4 sm:px-8 sm:py-5">
           <div className="mb-2 text-xs font-bold uppercase tracking-wider text-[#f59e0b]">Growth</div>
-          <p className="whitespace-nowrap text-sm text-gray-300 sm:text-base">あなたの動画を伸ばす設計を</p>
+          <p className="text-sm text-gray-300 sm:text-base sm:whitespace-nowrap">
+            <span className="sm:hidden">あなたの動画を<br />伸ばす設計を</span>
+            <span className="hidden sm:inline">あなたの動画を伸ばす設計を</span>
+          </p>
         </div>
       </div>
     </section>
