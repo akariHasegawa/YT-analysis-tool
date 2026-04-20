@@ -50,10 +50,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" className="dark">
-      <body className={`${notoSansJp.variable} ${syne.variable} font-sans min-h-screen antialiased`}>
+      <body className={`${notoSansJp.variable} ${syne.variable} font-sans min-h-screen antialiased bg-[#060810]`}>
         <LanguageProvider>
-          <NeonBackground />
-          <Header />
           {children}
           <Analytics />
         </LanguageProvider>
