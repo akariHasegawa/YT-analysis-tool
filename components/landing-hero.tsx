@@ -48,7 +48,7 @@ export function LandingHero({ onGetStarted }: LandingHeroProps) {
         <div className="flex-1 border border-r-0 border-[#6366f1] rounded-l-lg bg-transparent px-4 py-4 sm:px-8 sm:py-5">
           <div className="mb-2 text-xs font-bold uppercase tracking-wider text-[#6366f1]">Research</div>
           <p className="text-sm text-gray-300 sm:text-base sm:whitespace-nowrap">
-            <span className="sm:hidden">バズ動画の構造を<br />読み解く</span>
+            <span className="sm:hidden"><span className="whitespace-nowrap">バズ動画の構造を</span><br />読み解く</span>
             <span className="hidden sm:inline">バズ動画の構造を読み解く</span>
           </p>
         </div>
