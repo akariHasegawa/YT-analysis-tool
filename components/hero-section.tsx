@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { useLanguage } from "@/lib/language-context"
 import { ArrowRight } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -123,6 +124,27 @@ function AnimatedBackground() {
 
 export function HeroSection({ onGetStarted }: HeroSectionProps) {
   const { t } = useLanguage()
+  const [totalAnalyses, setTotalAnalyses] = useState<number | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch("/api/stats")
+        const json = (await res.json()) as { totalAnalyses?: unknown }
+        const n = typeof json.totalAnalyses === "number" ? json.totalAnalyses : Number(json.totalAnalyses)
+        if (!cancelled && !Number.isNaN(n)) setTotalAnalyses(n)
+      } catch {
+        if (!cancelled) setTotalAnalyses(null)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const analysesDisplay =
+    totalAnalyses === null ? "…" : `${totalAnalyses.toLocaleString("ja-JP")}+`
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-16">
@@ -174,7 +196,7 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
       <div className="absolute bottom-8 left-0 right-0 z-10 flex justify-center px-4">
         <div className="grid grid-cols-3 gap-6 sm:gap-12">
           <div className="text-center">
-            <div className="text-xl font-bold text-[oklch(0.82_0.16_250)] sm:text-2xl">12,400+</div>
+            <div className="text-xl font-bold text-[oklch(0.82_0.16_250)] sm:text-2xl">{analysesDisplay}</div>
             <div className="text-xs text-[oklch(0.65_0.08_270)]">{t("hero.stat1.label")}</div>
           </div>
           <div className="text-center">

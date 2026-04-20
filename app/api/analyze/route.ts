@@ -1,24 +1,37 @@
 import { NextRequest, NextResponse } from "next/server"
   import { z } from "zod"
-  import {
-    coerceAnalysisAiJson,
-    finalizeShortsAnalysisFromAi,
-    normalizeShortsAnalysis,
-    shortsAnalysisAiSchema,
-  } from "@/lib/shorts-analysis"
   import { extractYouTubeVideoId, isLikelyYouTubeUrl } from "@/lib/youtube-video-id"
   import { fetchYouTubeTranscriptLines } from "@/lib/youtube-transcript-lines"
+  import { structureTimelineFieldKeys } from "@/lib/structure-timeline"
   import {
-    emptyStructureTimelineFields,
-    inferStructureTimelineFromTranscript,
-    structureTimelineFieldKeys,
-  } from "@/lib/structure-timeline"
-  import {
-    buildReferenceInsights,
     formatSheetImprovementLines,
     formatSheetImprovementTags,
     formatSheetThumbnailImprovements,
   } from "@/lib/reference-insights"
+  import {
+    assertSupabaseForAnalyze,
+    checkAnalysisLimit,
+    fetchUserUsageRow,
+    incrementUserAnalysisCounts,
+    isAnalysisLimitDisabled,
+    type UserUsageRow,
+  } from "@/lib/analysis-usage"
+  import { fetchOpenAIChatCompletions } from "@/lib/openai-chat"
+  import {
+    buildUnifiedAnalysisSystemPrompt,
+    parseUnifiedOpenAiAnalysisContent,
+  } from "@/lib/unified-analysis-openai"
+  import { createSupabaseAdmin, createSupabaseAnon, isSupabaseConfigured } from "@/lib/supabase"
+  import type { User, SupabaseClient } from "@supabase/supabase-js"
+
+  const GUEST_ANALYSIS_COOKIE = "aiai_guest_analysis_count"
+
+  function readGuestAnalysisCount(req: NextRequest): number {
+    const raw = req.cookies.get(GUEST_ANALYSIS_COOKIE)?.value
+    if (raw == null || raw === "") return 0
+    const n = parseInt(raw, 10)
+    return Number.isFinite(n) && n >= 0 ? n : 0
+  }
 
   function detectPlatform(url: string): string {
     const u = url.toLowerCase()
@@ -154,58 +167,16 @@ import { NextRequest, NextResponse } from "next/server"
     viewCount: z.number().nullable().optional(),
     duration: z.number().nullable().optional(),
     thumbnailUrl: z.string().nullable().optional(),
+    /** バズ分析: research または従来の buzz。バズりたい: growth */
+    mode: z
+      .enum(["research", "growth", "buzz"])
+      .optional()
+      .transform((m): "research" | "growth" => {
+        if (m === undefined) return "growth"
+        return m === "buzz" ? "research" : m
+      }),
+    competitorUrl: z.string().nullish(),
   })
-
-  const SYSTEM_PROMPT = `あなたはYouTubeショート動画の構成分析に長けたマーケティングアナリストです。
-  ユーザーから渡されるのは「動画URL」「タイトル」「チャンネル名」と、取得できた場合は「字幕テキスト（秒付き）」です。実際の映像は見られません。
-
-  必ず日本語のみで出力すること。
-  次のJSONスキーマに完全一致する1つのJSONオブジェクトだけを返すこと（前後に説明文やマークダウンを付けない）。
-
-  {
-    "hook": { "value": "短いラベル（例: 質問型フック）", "description": "1〜3文の説明" },
-    "emotion": { "value": "短いラベル", "description": "1〜3文の説明" },
-    "cta": { "value": "短いラベル", "description": "1〜3文の説明" },
-    "structure": { "value": "短いラベル", "description": "1〜3文の説明" },
-    "retentionDimensions": {
-      "hookStrength": 1,
-      "tempo": 1,
-      "structureClarity": 1,
-      "emotionalArc": 1,
-      "payoffStrength": 1,
-      "ctaNaturalness": 1
-    },
-    "retentionReasons": ["短い理由1（20〜45文字程度）", "短い理由2（20〜45文字程度）"],
-    "improvementIdeas": ["改善1", "改善2", "改善3", "改善4", "改善5"],
-    "nextVideoIdeas": ["アイデア1", "アイデア2", "アイデア3", "アイデア4"],
-    "subjectType": "メイン被写体の推定（例: 人物単体、複数人物、物・商品、文字メイン、画面収録のみ）",
-    "actionType": "映像の動き・行為の推定（例: 静止〜軽い動き、歩行・移動、スポーツ的動き、手元・食事メイン）",
-    "sceneChangeLevel": "カット・場面の切り替わりの多さ。次のいずれか1語: 低 / 中 / 高",
-    "endingType": "締め方の型（例: CTAで締める、オチで締める、伏線回収、ループ型、次回予告型）"
-  }
-
-  retentionDimensions の各キーは整数1〜5のみ。意味は次のとおり:
-  - hookStrength: 冒頭フックの強さ
-  - tempo: テンポの良さ
-  - structureClarity: 構成のわかりやすさ
-  - emotionalArc: 感情変化の有無・効き
-  - payoffStrength: オチ・回収の強さ
-  - ctaNaturalness: CTAの自然さ
-
-  分析内容に応じて差をつけ、6軸すべて同じ整数（例: 全部4）にしないこと。
-  弱みや不確かな点は1〜2、明確な強みは4〜5とし、タイトル・チャンネル文脈と矛盾しない採点にすること。
-  retentionReasons は必ず2件。視聴維持率の見立ての根拠がわかる短文にすること（パーセント数値は書かないこと。システム側で算出する）。
-
-  improvementIdeas は必ず5件、nextVideoIdeas は必ず4件にすること。
-
-  ★ improvementIdeas は「この動画固有の改善点」を書くこと。
-  字幕が提供された場合は、具体的な発言内容・秒数・場面を引用して、汎用的でない改善案にすること。
-  例：「0:15の『〜』という発言の後にテンポが落ちているため、ここをカットしてオチに直結させると視聴維持率が上がる」
-
-  subjectType / actionType / endingType は、タイトル・チャンネル名から推論した短いラベル（各20文字以内目安）。
-  sceneChangeLevel は必ず「低」「中」「高」のいずれか1文字のみ（推論で決める）。
-
-  古い形式の "retention": { "value", "description" } は出力しないこと（必ず retentionDimensions と retentionReasons を使うこと）。`
 
   export async function POST(req: NextRequest) {
     const apiKey = process.env.OPENAI_API_KEY
@@ -228,12 +199,56 @@ import { NextRequest, NextResponse } from "next/server"
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
     }
 
-    const { url, title, channelName, publishedAt, viewCount, duration, thumbnailUrl } = parsed.data
+    const { url, title, channelName, publishedAt, viewCount, duration, thumbnailUrl, mode, competitorUrl } =
+      parsed.data
     if (!isLikelyYouTubeUrl(url)) {
       return NextResponse.json({ error: "YouTube のURLではない可能性があります" }, { status: 400 })
     }
 
+    const authHeader = req.headers.get("authorization")
+    const accessToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : null
+
+    let authUser: User | null = null
+    if (accessToken && isSupabaseConfigured()) {
+      try {
+        const anon = createSupabaseAnon()
+        const { data, error } = await anon.auth.getUser(accessToken)
+        if (!error && data.user) authUser = data.user
+      } catch (e) {
+        console.warn("[analyze] auth.getUser failed, treating as guest:", e)
+      }
+    }
+
+    let admin: SupabaseClient | null = null
+    const isGuest = authUser == null
+    const limitDisabled = isAnalysisLimitDisabled()
+
+    if (!isGuest && authUser) {
+      const supabaseGate = assertSupabaseForAnalyze()
+      if (!supabaseGate.ok) {
+        return NextResponse.json(supabaseGate.body, { status: supabaseGate.status })
+      }
+      admin = createSupabaseAdmin()
+      const usageProfile = await fetchUserUsageRow(admin, authUser.id, authUser.email ?? null)
+      if (!usageProfile) {
+        return NextResponse.json({ error: "USER_PROFILE_UNAVAILABLE" }, { status: 500 })
+      }
+      if (!limitDisabled) {
+        const limit = checkAnalysisLimit(usageProfile)
+        if (!limit.ok) {
+          return NextResponse.json({ error: "LIMIT_EXCEEDED", plan: limit.plan }, { status: 403 })
+        }
+      }
+    } else {
+      if (!limitDisabled && readGuestAnalysisCount(req) >= 1) {
+        return NextResponse.json({ error: "LIMIT_EXCEEDED", plan: "free" }, { status: 403 })
+      }
+    }
+
     const model = process.env.OPENAI_MODEL || "gpt-4o-mini"
+
+    const competitorUrlTrimmed = typeof competitorUrl === "string" ? competitorUrl.trim() : ""
+    const hasCompetitorUrl = competitorUrlTrimmed.length > 0
 
     // ★ 字幕を先に取得してメイン分析にも使う
     const vid = extractYouTubeVideoId(url)
@@ -247,34 +262,88 @@ import { NextRequest, NextResponse } from "next/server"
       }
     }
 
-    const userContent = `動画URL: ${url}
-  動画タイトル: ${title}
-  チャンネル名: ${channelName}
-  ${transcript ? `\n--- 字幕（秒付き） ---\n${transcript.slice(0, 16000)}` : "（字幕取得できませんでした）"}
+    let competitorTranscript = ""
+    if (hasCompetitorUrl && isLikelyYouTubeUrl(competitorUrlTrimmed)) {
+      const cvid = extractYouTubeVideoId(competitorUrlTrimmed)
+      if (cvid) {
+        try {
+          const ct = await fetchYouTubeTranscriptLines(cvid, { durationHintSec: null })
+          if (ct?.trim()) competitorTranscript = ct.trim()
+        } catch {
+          competitorTranscript = ""
+        }
+      }
+    }
 
-  【厳守】improvementIdeas の5件は以下のルールに従うこと：
-  - 必ず字幕の具体的な発言・秒数を「〇〇秒の『△△』という発言の後に〜」の形式で引用すること
-  - 「フックを強化する」「テンポを上げる」「CTAを明確にする」「視聴者参加型」などの汎用表現だけで終わらせることを禁止する
-  - この動画にしか当てはまらない改善案を書くこと
-  上記をもとに分析し、指定スキーマのJSONのみを返してください。`
+    const competitorBlock = hasCompetitorUrl
+      ? `\n--- 競合動画（比較対象） ---\n動画URL: ${competitorUrlTrimmed}\n${
+          !isLikelyYouTubeUrl(competitorUrlTrimmed)
+            ? "※YouTubeのURLとして解釈できません。字幕は取得していません。\n"
+            : ""
+        }${
+          competitorTranscript
+            ? `--- 競合の字幕（秒付き） ---\n${competitorTranscript.slice(0, 7000)}`
+            : "（競合動画の字幕は取得できませんでした）"
+        }\n`
+      : ""
+
+    let thumbForOpenAi: string | undefined
+    if (thumbnailUrl != null) {
+      const t = String(thumbnailUrl).trim()
+      if (t) {
+        try {
+          const u = new URL(t)
+          if (u.protocol === "http:" || u.protocol === "https:") thumbForOpenAi = u.toString()
+        } catch {
+          thumbForOpenAi = undefined
+        }
+      }
+    }
+
+    const systemPrompt = buildUnifiedAnalysisSystemPrompt(mode, hasCompetitorUrl, Boolean(thumbForOpenAi))
+
+    const userContent = `動画の長さ(秒・参考): ${duration != null ? String(duration) : "不明"}
+動画URL: ${url}
+動画タイトル: ${title}
+チャンネル名: ${channelName}
+${transcript ? `\n--- 字幕（秒付き） ---\n${transcript.slice(0, 11000)}` : "（字幕取得できませんでした）"}
+${competitorBlock}
+【厳守】analysis.improvementIdeas の5件は以下のルールに従うこと：
+- 必ず字幕の具体的な発言・秒数を「〇〇秒の『△△』という発言の後に〜」の形式で引用すること
+- 「フックを強化する」「テンポを上げる」「CTAを明確にする」「視聴者参加型」などの汎用表現だけで終わらせることを禁止する
+- この動画にしか当てはまらない改善案を書くこと
+上記をもとに、システム指示のとおり analysis / structureTimeline / referenceInsights を含む1つのJSONのみを返してください。`
+
+    const userMessage: {
+      role: "user"
+      content:
+        | string
+        | Array<
+            | { type: "text"; text: string }
+            | { type: "image_url"; image_url: { url: string; detail: "low" } }
+          >
+    } = thumbForOpenAi
+      ? {
+          role: "user",
+          content: [
+            { type: "text", text: userContent },
+            { type: "image_url", image_url: { url: thumbForOpenAi, detail: "low" } },
+          ],
+        }
+      : { role: "user", content: userContent }
+
     let res: Response
     try {
-      res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      res = await fetchOpenAIChatCompletions(
+        apiKey,
+        {
           model,
           temperature: 0.6,
           response_format: { type: "json_object" },
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: userContent },
-          ],
-        }),
-      })
+          messages: [{ role: "system", content: systemPrompt }, userMessage],
+        },
+        { maxRetries: 6 }
+      )
     } catch (e) {
       const message = e instanceof Error ? e.message : "OpenAI への接続に失敗しました"
       return NextResponse.json({ error: message }, { status: 502 })
@@ -282,6 +351,24 @@ import { NextRequest, NextResponse } from "next/server"
 
     if (!res.ok) {
       const errText = await res.text()
+      if (res.status === 429) {
+        let apiDetail = ""
+        try {
+          const j = JSON.parse(errText) as { error?: { message?: string } }
+          const m = j?.error?.message?.trim()
+          if (m) apiDetail = `（OpenAI: ${m.slice(0, 200)}）`
+        } catch {
+          /* ignore */
+        }
+        return NextResponse.json(
+          {
+            error: "OPENAI_RATE_LIMIT",
+            message:
+              `OpenAI の一時的な上限（レート制限）に達しました（429）。2〜5分ほど空けてから再度お試しください。繰り返す場合は https://platform.openai.com/account/billing でクレジットと利用枠を確認するか、.env.local の OPENAI_MODEL を gpt-4o-mini にすると改善することがあります。${apiDetail}`,
+          },
+          { status: 429 }
+        )
+      }
       return NextResponse.json(
         { error: `OpenAI API エラー: ${res.status}`, detail: errText.slice(0, 500) },
         { status: 502 }
@@ -296,24 +383,17 @@ import { NextRequest, NextResponse } from "next/server"
       return NextResponse.json({ error: "AIからの応答が空でした" }, { status: 502 })
     }
 
-    let analysisJson: unknown
-    try {
-      analysisJson = JSON.parse(content)
-    } catch {
-      return NextResponse.json({ error: "AIの応答をJSONとして解釈できませんでした" }, { status: 502 })
-    }
-
-    const analysisResult = shortsAnalysisAiSchema.safeParse(coerceAnalysisAiJson(analysisJson))
-    if (!analysisResult.success) {
+    const parsedUnified = parseUnifiedOpenAiAnalysisContent(content, {
+      durationSec: duration ?? null,
+      sourceThumbnailUrl: thumbForOpenAi,
+    })
+    if (!parsedUnified.ok) {
       return NextResponse.json(
-        { error: "AIの出力形式が不正です", issues: analysisResult.error.flatten() },
+        { error: "AIの出力形式が不正です", detail: parsedUnified.error },
         { status: 502 }
       )
     }
 
-    const rawAnalysis = normalizeShortsAnalysis(finalizeShortsAnalysisFromAi(analysisResult.data))
-
-    // 秒数を「〇分〇秒」形式に変換
     function convertSecondsToMinSec(text: string): string {
       return text.replace(/(\d+(?:\.\d+)?)秒/g, (_, numStr: string) => {
         const totalSec = parseFloat(numStr)
@@ -324,31 +404,11 @@ import { NextRequest, NextResponse } from "next/server"
     }
 
     const analysis = {
-      ...rawAnalysis,
-      improvementIdeas: rawAnalysis.improvementIdeas.map(convertSecondsToMinSec),
+      ...parsedUnified.value.analysis,
+      improvementIdeas: parsedUnified.value.analysis.improvementIdeas.map(convertSecondsToMinSec),
     }
-
-    const [timelineForSheet, referenceInsights] = await Promise.all([
-      transcript
-        ? inferStructureTimelineFromTranscript({
-            apiKey,
-            model,
-            transcript,
-            title,
-            channelName,
-            durationSec: duration ?? null,
-          }).catch((e) => {
-            console.error("[structure-timeline] infer failed", e)
-            return emptyStructureTimelineFields()
-          })
-        : Promise.resolve(emptyStructureTimelineFields()),
-      buildReferenceInsights(analysis, apiKey, model, {
-        sourceTitle: title,
-        sourceChannel: channelName,
-        transcriptExcerpt: transcript,
-        sourceThumbnailUrl: thumbnailUrl?.trim() || undefined,
-      }),
-    ])
+    const timelineForSheet = parsedUnified.value.timelineForSheet
+    const referenceInsights = parsedUnified.value.referenceInsights
 
     const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL?.trim()
     if (webhookUrl) {
@@ -447,5 +507,41 @@ import { NextRequest, NextResponse } from "next/server"
       }
     }
 
-    return NextResponse.json({ analysis, referenceInsights })
+    type UsagePayload = Pick<UserUsageRow, "plan" | "analysis_count_total" | "analysis_count_month" | "usage_month">
+    const responseBody: {
+      analysis: typeof analysis
+      referenceInsights: typeof referenceInsights
+      usage?: UsagePayload
+    } = { analysis, referenceInsights }
+
+    if (!isGuest && admin && authUser != null) {
+      try {
+        await incrementUserAnalysisCounts(admin, authUser.id)
+      } catch (e) {
+        console.error("[analyze] incrementUserAnalysisCounts failed", e)
+      }
+      const { data: usageRow, error: usageErr } = await admin
+        .from("users")
+        .select("plan, analysis_count_total, analysis_count_month, usage_month")
+        .eq("id", authUser.id)
+        .maybeSingle()
+      if (usageErr) {
+        console.error("[analyze] fetch usage after increment failed", usageErr)
+      } else if (usageRow) {
+        responseBody.usage = usageRow as UsagePayload
+      }
+    }
+
+    const jsonResponse = NextResponse.json(responseBody)
+    if (isGuest && !limitDisabled) {
+      jsonResponse.cookies.set(GUEST_ANALYSIS_COOKIE, "1", {
+        maxAge: 60 * 60 * 24 * 400,
+        path: "/",
+        sameSite: "lax",
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+      })
+    }
+
+    return jsonResponse
   }

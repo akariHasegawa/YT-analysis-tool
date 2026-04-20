@@ -46,11 +46,11 @@ const MODE_STYLES = {
   },
 }
 
-// Features list for growth mode
+// Features list for growth mode（日本語固定）
 const GROWTH_FEATURES = [
-  { icon: FileText, key: "input.growth.feature1", fallback: "改善提案レポート" },
-  { icon: Lightbulb, key: "input.growth.feature2", fallback: "次回作アイデア4つ" },
-  { icon: TrendingUp, key: "input.growth.feature3", fallback: "台本・動画プロンプト生成" },
+  { icon: FileText, label: "改善提案レポート" },
+  { icon: Lightbulb, label: "次回作アイデア4つ" },
+  { icon: TrendingUp, label: "台本・動画プロンプト生成" },
 ]
 
 export function UrlInputScreen({ onAnalyze, onBack, mode = "buzz" }: UrlInputScreenProps) {
@@ -180,10 +180,7 @@ export function UrlInputScreen({ onAnalyze, onBack, mode = "buzz" }: UrlInputScr
             {/* Main URL input */}
             <div className="flex flex-col gap-2">
               <label htmlFor="video-url" className="text-sm font-medium text-foreground/90">
-                {isGrowthMode 
-                  ? (t("input.growth.urlLabel") || "自分の動画URL")
-                  : (t("input.buzz.urlLabel") || "分析する動画URL")
-                }
+                {isGrowthMode ? "自分の動画URLを入力" : "動画URLを入力"}
               </label>
               <div className="relative">
                 <PlayCircle 
@@ -210,10 +207,10 @@ export function UrlInputScreen({ onAnalyze, onBack, mode = "buzz" }: UrlInputScr
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <label htmlFor="competitor-url" className="text-sm font-medium text-foreground/90">
-                    {t("input.growth.competitorLabel") || "競合動画URL"}
+                    競合動画URL
                   </label>
                   <span className="rounded-full bg-[oklch(0.25_0.08_60_/_0.5)] px-2 py-0.5 text-[10px] font-medium text-[oklch(0.8_0.14_70)]">
-                    {t("input.optional") || "任意"}
+                    任意
                   </span>
                 </div>
                 <div className="relative">
@@ -224,7 +221,7 @@ export function UrlInputScreen({ onAnalyze, onBack, mode = "buzz" }: UrlInputScr
                   <Input
                     id="competitor-url"
                     type="url"
-                    placeholder={t("input.growth.competitorPlaceholder") || "比較したい競合の動画URL"}
+                    placeholder="バズってる競合動画のURLを貼る"
                     value={competitorUrl}
                     onChange={(e) => {
                       setCompetitorUrl(e.target.value)
@@ -250,16 +247,14 @@ export function UrlInputScreen({ onAnalyze, onBack, mode = "buzz" }: UrlInputScr
             {/* Features list (growth mode) */}
             {isGrowthMode && (
               <div className="rounded-xl bg-[oklch(0.14_0.04_280_/_0.5)] p-4 border border-[oklch(0.4_0.08_270_/_0.2)]">
-                <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  {t("input.growth.featuresTitle") || "生成されるレポート"}
+                <p className="mb-3 text-xs font-medium tracking-wide text-muted-foreground">
+                  生成されるレポート
                 </p>
                 <div className="flex flex-col gap-2">
                   {GROWTH_FEATURES.map((feature) => (
-                    <div key={feature.key} className="flex items-center gap-2.5">
+                    <div key={feature.label} className="flex items-center gap-2.5">
                       <feature.icon className="h-4 w-4 text-[oklch(0.7_0.14_70)]" />
-                      <span className="text-sm text-foreground/90">
-                        {t(feature.key) || feature.fallback}
-                      </span>
+                      <span className="text-sm text-foreground/90">{feature.label}</span>
                     </div>
                   ))}
                 </div>
@@ -282,7 +277,7 @@ export function UrlInputScreen({ onAnalyze, onBack, mode = "buzz" }: UrlInputScr
                 boxShadow: isSubmitDisabled ? "none" : styles.buttonGlow,
               }}
             >
-              {t("input.button.start") || "分析スタート"}
+              分析スタート
               <ArrowRight className="h-4 w-4" />
             </Button>
           </form>

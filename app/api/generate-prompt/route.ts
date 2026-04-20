@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 
+const competitorComparisonContextSchema = z
+  .object({
+    competitorStrengths: z.array(z.string()).optional(),
+    yourWeaknesses: z.array(z.string()).optional(),
+    priorityImprovements: z.array(z.string()).optional(),
+  })
+  .optional()
+
 const bodySchema = z.object({
   idea: z.string().min(1),
   promptType: z.enum(["script", "video"]),
@@ -11,6 +19,7 @@ const bodySchema = z.object({
     improvementIdeas: z.array(z.string()).optional(),
     hook: z.string().optional(),
     emotion: z.string().optional(),
+    competitorComparison: competitorComparisonContextSchema,
   }),
 })
 
@@ -75,7 +84,7 @@ export async function POST(req: NextRequest) {
   const { idea, promptType, context } = parsed.data
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini"
 
-  const userContent = `動画アイデア: ${idea}
+  let userContent = `動画アイデア: ${idea}
 
 チャンネル名: ${context.channelName}
 ${context.hook ? `フック手法: ${context.hook}` : ""}
@@ -85,6 +94,18 @@ ${context.actionType ? `映像アクション: ${context.actionType}` : ""}
 ${context.improvementIdeas?.length ? `元動画の改善点:\n${context.improvementIdeas.slice(0, 3).map((s, i) => `${i + 1}. ${s}`).join("\n")}` : ""}
 
 上記を踏まえて${promptType === "script" ? "台本生成プロンプト" : "動画生成プロンプト"}を作成してください。`
+
+  const cc = context.competitorComparison
+  if (cc) {
+    const weaknesses = (cc.yourWeaknesses ?? []).map((s) => s.trim()).filter(Boolean)
+    const strengths = (cc.competitorStrengths ?? []).map((s) => s.trim()).filter(Boolean)
+    if (promptType === "script" && weaknesses.length > 0) {
+      userContent += `\n\n※競合分析で判明した不足要素：\n${weaknesses.map((s, i) => `${i + 1}. ${s}`).join("\n")}\n上記の弱点を補う構成にしてください。`
+    }
+    if (promptType === "video" && strengths.length > 0) {
+      userContent += `\n\n※競合動画で効果的だった要素：\n${strengths.map((s, i) => `${i + 1}. ${s}`).join("\n")}\n上記の強みを参考にした映像構成にしてください。`
+    }
+  }
 
   const systemPrompt = promptType === "script" ? SCRIPT_SYSTEM_PROMPT : VIDEO_SYSTEM_PROMPT
 

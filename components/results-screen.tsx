@@ -20,7 +20,7 @@ import {
   Video,
   Copy,
   Check,
-  Lock,
+  Scale,
   type LucideIcon,
 } from "lucide-react"
 import { LockedFeature, PlanBadge } from "@/components/locked-feature"
@@ -28,6 +28,7 @@ import { UpgradeModal, type PlanType } from "@/components/upgrade-modal"
 import { cn } from "@/lib/utils"
 import type { VideoInfo } from "@/lib/video-info"
 import type { ShortsAnalysis } from "@/lib/shorts-analysis"
+import type { AnalysisMode } from "@/components/mode-selection"
 import type { ReferenceInsightsPayload, SourceThumbnailInsight, EnrichedImprovementRow } from "@/lib/reference-insights"
 import {
   approximateTrendScoreFromViews,
@@ -48,6 +49,9 @@ interface ResultsScreenProps {
   userPlan?: PlanType
   remainingAnalyses?: number
   maxAnalyses?: number
+  /** growth かつ入力で競合URLを付けたとき true */
+  hadCompetitorUrl?: boolean
+  analysisMode?: AnalysisMode
 }
 
 type AnalysisCardKey = "hook" | "emotion" | "cta" | "structure" | "retention"
@@ -107,6 +111,8 @@ export function ResultsScreen({
   userPlan = "free",
   remainingAnalyses = 0,
   maxAnalyses = 1,
+  hadCompetitorUrl = false,
+  analysisMode = "buzz",
 }: ResultsScreenProps) {
   const { t, language } = useLanguage()
   const locale = language === "ja" ? "ja-JP" : "en-US"
@@ -126,9 +132,6 @@ export function ResultsScreen({
   }
   
   // Feature access based on plan
-  const isPro = userPlan === "pro" || userPlan === "business"
-  const isBusiness = userPlan === "business"
-
   type PromptState = {
     loading: "script" | "video" | null
     scriptPrompt: string | null
@@ -170,6 +173,9 @@ export function ResultsScreen({
             subjectType: analysis.subjectType,
             actionType: analysis.actionType,
             improvementIdeas: analysis.improvementIdeas,
+            ...(analysis.competitorComparison
+              ? { competitorComparison: analysis.competitorComparison }
+              : {}),
           },
         }),
       })
@@ -342,12 +348,84 @@ export function ResultsScreen({
               ) : null}
             </section>
 
+            {analysis && analysisMode === "growth" && hadCompetitorUrl ? (
+              <section className="space-y-4">
+                <SectionLabel>{t("results.competitorSection") || "競合比較分析"}</SectionLabel>
+                <div className="glass-card neon-card-glow rounded-2xl p-6 sm:p-8">
+                  <div className="mb-6 flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[oklch(0.32_0.12_55_/_0.55)] text-[oklch(0.88_0.14_70)]">
+                      <Scale className="h-5 w-5" />
+                    </div>
+                    <h3 className="text-base font-semibold text-foreground sm:text-lg">
+                      {t("results.competitorSectionTitle") || "メイン動画と競合の比較"}
+                    </h3>
+                  </div>
+                  {analysis.competitorComparison ? (
+                    <div className="flex flex-col gap-8">
+                      <div>
+                        <h4 className="mb-3 text-sm font-semibold text-[oklch(0.78_0.12_70)]">
+                          {t("results.competitorStrengths") || "競合動画が優れている点（3つ）"}
+                        </h4>
+                        <ul className="flex flex-col gap-2">
+                          {analysis.competitorComparison.competitorStrengths.map((line, i) => (
+                            <li
+                              key={`cs-${i}`}
+                              className="rounded-lg border border-[oklch(0.5_0.1_270_/_0.15)] bg-[oklch(0.14_0.05_280_/_0.35)] px-4 py-3 text-sm leading-relaxed text-foreground/95"
+                            >
+                              <span className="mr-2 font-bold text-[oklch(0.72_0.14_250)]">{i + 1}.</span>
+                              {line}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <h4 className="mb-3 text-sm font-semibold text-[oklch(0.78_0.12_300)]">
+                          {t("results.yourWeaknesses") || "自分の動画に足りない要素（3つ）"}
+                        </h4>
+                        <ul className="flex flex-col gap-2">
+                          {analysis.competitorComparison.yourWeaknesses.map((line, i) => (
+                            <li
+                              key={`yw-${i}`}
+                              className="rounded-lg border border-[oklch(0.5_0.1_270_/_0.15)] bg-[oklch(0.14_0.05_280_/_0.35)] px-4 py-3 text-sm leading-relaxed text-foreground/95"
+                            >
+                              <span className="mr-2 font-bold text-[oklch(0.72_0.14_300)]">{i + 1}.</span>
+                              {line}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <h4 className="mb-3 text-sm font-semibold text-[oklch(0.78_0.12_140)]">
+                          {t("results.priorityImprovements") || "今すぐ改善すべき優先度TOP3"}
+                        </h4>
+                        <ul className="flex flex-col gap-2">
+                          {analysis.competitorComparison.priorityImprovements.map((line, i) => (
+                            <li
+                              key={`pi-${i}`}
+                              className="rounded-lg border border-[oklch(0.55_0.14_140_/_0.25)] bg-[oklch(0.16_0.06_140_/_0.2)] px-4 py-3 text-sm leading-relaxed text-foreground/95"
+                            >
+                              <span className="mr-2 font-bold text-[oklch(0.75_0.16_140)]">{i + 1}.</span>
+                              {line}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      {t("results.competitorMissing") || "競合比較データを取得できませんでした。しばらくしてから再度分析してください。"}
+                    </p>
+                  )}
+                </div>
+              </section>
+            ) : null}
+
             {analysis && referenceInsights?.sourceThumbnail ? (
               <SourceThumbnailInsightCard insight={referenceInsights.sourceThumbnail} videoTitle={title} />
             ) : null}
 
             {analysis && referenceInsights && referenceInsights.enrichedImprovements.length > 0 ? (
-              <LockedFeature isLocked={!isPro} requiredPlan="pro" onUpgradeClick={handleUpgradeClick}>
+              <LockedFeature isLocked={false} requiredPlan="pro" onUpgradeClick={handleUpgradeClick}>
                 <TaggedImprovementsSection rows={referenceInsights.enrichedImprovements} />
               </LockedFeature>
             ) : null}
@@ -380,7 +458,7 @@ export function ResultsScreen({
             ) : null}
 
             {analysis ? (
-              <LockedFeature isLocked={!isPro} requiredPlan="pro" onUpgradeClick={handleUpgradeClick}>
+              <LockedFeature isLocked={false} requiredPlan="pro" onUpgradeClick={handleUpgradeClick}>
                 <section className="space-y-4">
                   <SectionLabel>{t("results.ideas")}</SectionLabel>
                   <div className="glass-card neon-card-glow rounded-2xl p-6 sm:p-8">

@@ -92,8 +92,31 @@ export function coerceAnalysisAiJson(raw: unknown): unknown {
     }
   }
 
+  const rawCc = o.competitorComparison
+  if (rawCc != null && typeof rawCc === "object" && !Array.isArray(rawCc)) {
+    const c = rawCc as Record<string, unknown>
+    const toStrArr = (key: string) =>
+      Array.isArray(c[key]) ? (c[key] as unknown[]).map((x) => String(x ?? "").trim()) : []
+    o.competitorComparison = {
+      competitorStrengths: toStrArr("competitorStrengths"),
+      yourWeaknesses: toStrArr("yourWeaknesses"),
+      priorityImprovements: toStrArr("priorityImprovements"),
+    }
+  } else {
+    delete o.competitorComparison
+  }
+
   return o
 }
+
+/** バズりたい＋競合URL時の比較ブロック（正規化で各3件に揃える） */
+export const competitorComparisonSchema = z.object({
+  competitorStrengths: z.array(z.string()).default([]),
+  yourWeaknesses: z.array(z.string()).default([]),
+  priorityImprovements: z.array(z.string()).default([]),
+})
+
+export type CompetitorComparison = z.infer<typeof competitorComparisonSchema>
 
 /** OpenAI が返す JSON（視聴維持率は次元スコア＋理由2件のみ） */
 export const shortsAnalysisAiSchema = z.object({
@@ -125,6 +148,8 @@ export const shortsAnalysisAiSchema = z.object({
   sceneChangeLevel: z.string(),
   /** 締め方の型（短いラベル） */
   endingType: z.string(),
+  /** growth モードかつ競合URLありのときのみ */
+  competitorComparison: competitorComparisonSchema.optional(),
 })
 
 export type ShortsAnalysisAi = z.infer<typeof shortsAnalysisAiSchema>
@@ -163,6 +188,22 @@ export function finalizeShortsAnalysisFromAi(ai: ShortsAnalysisAi): ShortsAnalys
   }
 }
 
+function normalizeCompetitorComparisonBlock(cc: CompetitorComparison | undefined): CompetitorComparison | undefined {
+  if (!cc) return undefined
+  const pad3 = (arr: string[]) => {
+    const x = arr.map((s) => s.trim()).filter((s) => s.length > 0)
+    const filler = "（追記なし）"
+    const out = [...x]
+    while (out.length < 3) out.push(filler)
+    return out.slice(0, 3)
+  }
+  return {
+    competitorStrengths: pad3(cc.competitorStrengths),
+    yourWeaknesses: pad3(cc.yourWeaknesses),
+    priorityImprovements: pad3(cc.priorityImprovements),
+  }
+}
+
 export function normalizeShortsAnalysis(analysis: ShortsAnalysis): ShortsAnalysis {
   const pad = (arr: string[], len: number, filler: string) => {
     const out = [...arr].slice(0, len)
@@ -173,5 +214,6 @@ export function normalizeShortsAnalysis(analysis: ShortsAnalysis): ShortsAnalysi
     ...analysis,
     improvementIdeas: pad(analysis.improvementIdeas, 5, "（追記なし）"),
     nextVideoIdeas: pad(analysis.nextVideoIdeas, 4, "（追記なし）"),
+    competitorComparison: normalizeCompetitorComparisonBlock(analysis.competitorComparison),
   }
 }
