@@ -116,7 +116,7 @@ export function PricingSection({ onPlanSelect }: PricingProps) {
             <div className="mb-6">
               <div className="text-3xl font-bold text-white">¥14,800<span className="text-lg font-normal text-gray-400"> / 月</span></div>
               <div className="text-sm text-gray-400">月100回分析可能</div>
-              <div className="mt-1 text-xs text-gray-500">※最大5本の同時分析も1回としてカウント</div>
+              <div className="mt-1 text-xs text-gray-400">※最大5本の同時分析も1回としてカウント</div>
             </div>
 
             {/* Features */}
