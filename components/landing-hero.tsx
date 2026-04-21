@@ -24,10 +24,32 @@ export function LandingHero({ onGetStarted }: LandingHeroProps) {
         </span>
       </h1>
 
-      {/* Subheadline */}
-      <div className="mt-6 space-y-1 text-center text-gray-400">
-        <p className="text-base sm:text-lg">センスより、構造。</p>
-        <p className="text-base sm:text-lg">分析で終わらない。伸ばすための設計まで。</p>
+      {/* Subheadline - New Version */}
+      <div className="mt-8 space-y-4 text-center">
+        {/* First line */}
+        <p className="text-base font-bold text-white sm:text-lg">あなたはURLを貼るだけ。</p>
+
+        {/* Three items with bullet points */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-400 sm:text-base">
+            <span className="text-[#6366f1]">●</span>
+            <span>バズ動画との比較・分析</span>
+          </div>
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-400 sm:text-base">
+            <span className="text-[#6366f1]">●</span>
+            <span>改善点の提案</span>
+          </div>
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-400 sm:text-base">
+            <span className="text-[#6366f1]">●</span>
+            <span>次の動画案と台本</span>
+          </div>
+        </div>
+
+        {/* Automatic line */}
+        <p className="pt-2 text-base font-bold text-white sm:text-lg">すべて、自動。もう悩まなくていい。</p>
+
+        {/* Business plan line */}
+        <p className="text-xs text-[#f59e0b] sm:text-sm">Businessプランなら、音声生成まで。 →</p>
       </div>
 
       {/* CTA Button */}
