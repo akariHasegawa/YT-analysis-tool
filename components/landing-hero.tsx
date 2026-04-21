@@ -29,17 +29,17 @@ export function LandingHero({ onGetStarted }: LandingHeroProps) {
         {/* First line */}
         <p className="text-base font-bold text-white sm:text-lg">あなたはURLを貼るだけ。</p>
 
-        {/* Three items with bullet points */}
+        {/* Three items with bullet points - staggered fade-up animation */}
         <div className="space-y-2">
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-400 sm:text-base">
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-400 sm:text-base animate-fade-up-delay-1">
             <span className="text-[#6366f1]">●</span>
             <span>バズ動画との比較・分析</span>
           </div>
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-400 sm:text-base">
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-400 sm:text-base animate-fade-up-delay-2">
             <span className="text-[#6366f1]">●</span>
             <span>改善点の提案</span>
           </div>
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-400 sm:text-base">
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-400 sm:text-base animate-fade-up-delay-3">
             <span className="text-[#6366f1]">●</span>
             <span>次の動画案と台本</span>
           </div>
