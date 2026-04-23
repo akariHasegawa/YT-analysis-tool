@@ -49,7 +49,7 @@ export function LandingHero({ onGetStarted }: LandingHeroProps) {
         <p className="pt-2 text-base font-bold text-white sm:text-lg">すべて、自動。もう悩まなくていい。</p>
 
         {/* Business plan line */}
-        <p className="text-xs text-[#f59e0b] sm:text-sm">Businessプランなら、音声生成まで。 →</p>
+        <p className="text-xs text-[#f59e0b] sm:text-sm">Businessプランなら、音声生成まで。</p>
       </div>
 
       {/* CTA Button */}
