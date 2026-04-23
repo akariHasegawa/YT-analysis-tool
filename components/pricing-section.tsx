@@ -50,7 +50,7 @@ export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: Pri
           </div>
 
           {/* PRO Card */}
-          <div className="w-[80vw] max-w-sm flex-shrink-0 rounded-2xl border-2 border-[#6366f1] bg-[#0f1117] p-8 sm:w-full">
+          <div className="w-[80vw] max-w-sm flex-shrink-0 rounded-2xl border-2 border-[#6366f1] bg-gradient-to-br from-[#0f1117] to-[#1e1a4f] p-8 sm:w-full">
             <div className="mb-4 inline-block rounded-lg bg-[#6366f1] px-3 py-1 text-xs font-bold text-white">
               PRO
             </div>
@@ -72,14 +72,14 @@ export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: Pri
             <button
               onClick={() => onPlanSelect('pro')}
               disabled={checkoutLoadingPlan != null}
-              className="w-full rounded-lg bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-4 py-2 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[rgba(99,102,241,0.4)]"
+              className="w-full rounded-lg bg-gradient-to-r from-[#a78bfa] to-[#4c1d95] px-4 py-2 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[rgba(99,102,241,0.4)]"
             >
               {checkoutLoadingPlan === "pro" ? "チェックアウトへ接続中..." : "Proを始める"}
             </button>
           </div>
 
           {/* BUSINESS Card */}
-          <div className="w-[80vw] max-w-sm flex-shrink-0 rounded-2xl border border-[#f59e0b] bg-[#0f1117] p-8 sm:w-full">
+          <div className="w-[80vw] max-w-sm flex-shrink-0 rounded-2xl border border-[#f59e0b] bg-gradient-to-br from-[#0f1117] to-[#4f2a0f] p-8 sm:w-full">
             <div className="mb-4 inline-block rounded-lg bg-[#f59e0b] px-3 py-1 text-xs font-bold text-black">
               BUSINESS
             </div>
