@@ -49,7 +49,7 @@ export function PricingSection({ onPlanSelect }: PricingProps) {
           </div>
 
           {/* PRO Card */}
-          <div className="w-[80vw] max-w-sm flex-shrink-0 rounded-2xl border-2 border-[#6366f1] bg-gradient-to-br from-[#0f1117] to-[rgba(99,102,241,0.1)] p-8 sm:w-full">
+          <div className="w-[80vw] max-w-sm flex-shrink-0 rounded-2xl border-2 border-[#6366f1] bg-gradient-to-br from-[#0f1117] to-[#1e1a4f] p-8 sm:w-full">
             <div className="mb-4 inline-block rounded-lg bg-[#6366f1] px-3 py-1 text-xs font-bold text-white">
               PRO
             </div>
@@ -77,7 +77,7 @@ export function PricingSection({ onPlanSelect }: PricingProps) {
           </div>
 
           {/* BUSINESS Card */}
-          <div className="w-[80vw] max-w-sm flex-shrink-0 rounded-2xl border border-[#f59e0b] bg-[#0f1117] p-8 sm:w-full">
+          <div className="w-[80vw] max-w-sm flex-shrink-0 rounded-2xl border border-[#f59e0b] bg-gradient-to-br from-[#0f1117] to-[#4f2a0f] p-8 sm:w-full">
             <div className="mb-4 inline-block rounded-lg bg-[#f59e0b] px-3 py-1 text-xs font-bold text-black">
               BUSINESS
             </div>
