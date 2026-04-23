@@ -70,7 +70,7 @@ export function PricingSection({ onPlanSelect }: PricingProps) {
 
             <button
               onClick={() => onPlanSelect('pro')}
-              className="w-full rounded-lg bg-gradient-to-r from-[#6366f1] to-[#a78bfa] px-4 py-2 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[rgba(99,102,241,0.4)]"
+              className="w-full rounded-lg bg-gradient-to-r from-[#a78bfa] to-[#4c1d95] px-4 py-2 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[rgba(99,102,241,0.4)]"
             >
               Proを始める
             </button>
