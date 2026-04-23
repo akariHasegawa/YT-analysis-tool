@@ -45,10 +45,12 @@ interface ResultsScreenProps {
   analysisLoading: boolean
   referenceInsights: ReferenceInsightsPayload | null
   onReset: () => void
+  onUpgrade?: (plan: PlanType) => void
   // Plan-related props (defaults for demo)
   userPlan?: PlanType
   remainingAnalyses?: number
   maxAnalyses?: number
+  isFirstFreeAnalysis?: boolean
   /** growth かつ入力で競合URLを付けたとき true */
   hadCompetitorUrl?: boolean
   analysisMode?: AnalysisMode
@@ -108,11 +110,13 @@ export function ResultsScreen({
   analysisLoading,
   referenceInsights,
   onReset,
+  onUpgrade,
   userPlan = "free",
   remainingAnalyses = 0,
   maxAnalyses = 1,
   hadCompetitorUrl = false,
   analysisMode = "buzz",
+  isFirstFreeAnalysis = false,
 }: ResultsScreenProps) {
   const { t, language } = useLanguage()
   const locale = language === "ja" ? "ja-JP" : "en-US"
@@ -127,8 +131,8 @@ export function ResultsScreen({
   }
   
   const handleUpgrade = (plan: PlanType) => {
-    // Placeholder for Stripe integration - will be implemented later
     setUpgradeModalOpen(false)
+    onUpgrade?.(plan)
   }
   
   // Feature access based on plan
@@ -229,6 +233,8 @@ export function ResultsScreen({
       : t("results.statUnavailable")
 
   const showAiSections = analysisLoading || analysis != null || Boolean(analysisError)
+  // 初回お試しは全部見せる。2回目以降のFreeはロック
+  const isProLocked = userPlan === "free" && !isFirstFreeAnalysis
 
   return (
     <main className="relative min-h-[calc(100vh-4rem)] pb-20 pt-8 sm:pt-10">
@@ -302,7 +308,21 @@ export function ResultsScreen({
           </div>
         </section>
 
-        {showAiSections ? (
+        {isProLocked ? (
+          <div className="glass-card neon-card-glow rounded-2xl p-8 text-center space-y-4">
+            <p className="text-base font-semibold text-foreground">AI分析はProプラン以上で利用できます</p>
+            <p className="text-sm text-muted-foreground">再生数・動画時間などの基本情報は無料で確認できます。</p>
+            <button
+              type="button"
+              onClick={() => handleUpgradeClick("pro")}
+              className="mt-2 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-6 py-2.5 text-sm font-semibold text-white hover:shadow-lg transition-all"
+            >
+              Proプランにアップグレード
+            </button>
+          </div>
+        ) : null}
+
+        {showAiSections && !isProLocked ? (
           <>
             <section className="space-y-6">
               <SectionLabel>{t("results.aiAnalysis")}</SectionLabel>
@@ -425,7 +445,7 @@ export function ResultsScreen({
             ) : null}
 
             {analysis && referenceInsights && referenceInsights.enrichedImprovements.length > 0 ? (
-              <LockedFeature isLocked={false} requiredPlan="pro" onUpgradeClick={handleUpgradeClick}>
+              <LockedFeature isLocked={isProLocked} requiredPlan="pro" onUpgradeClick={handleUpgradeClick}>
                 <TaggedImprovementsSection rows={referenceInsights.enrichedImprovements} />
               </LockedFeature>
             ) : null}
@@ -458,7 +478,7 @@ export function ResultsScreen({
             ) : null}
 
             {analysis ? (
-              <LockedFeature isLocked={false} requiredPlan="pro" onUpgradeClick={handleUpgradeClick}>
+              <LockedFeature isLocked={isProLocked} requiredPlan="pro" onUpgradeClick={handleUpgradeClick}>
                 <section className="space-y-4">
                   <SectionLabel>{t("results.ideas")}</SectionLabel>
                   <div className="glass-card neon-card-glow rounded-2xl p-6 sm:p-8">

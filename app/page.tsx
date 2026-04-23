@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useCallback, useEffect, useRef } from "react"
 import { Header } from "@/components/header"
@@ -15,13 +15,18 @@ import type { ReferenceInsightsPayload } from "@/lib/reference-insights"
 import type { VideoInfo } from "@/lib/video-info"
 import type { PlanType } from "@/components/upgrade-modal"
 import { useLanguage } from "@/lib/language-context"
+import { useSupabaseAuth } from "@/components/supabase-auth-provider"
+import { createBrowserSupabase } from "@/lib/supabase"
 
 type Screen = "landing" | "mode-selection" | "input" | "processing" | "results"
+type PaidPlan = "pro" | "business"
 
 export default function Home() {
   const { t } = useLanguage()
   const tRef = useRef(t)
   tRef.current = t
+
+  const { session, refreshSession } = useSupabaseAuth()
 
   // Screen flow state
   const [screen, setScreen] = useState<Screen>("landing")
@@ -43,8 +48,61 @@ export default function Home() {
   const [userPlan, setUserPlan] = useState<PlanType>("free")
   const [remainingAnalyses, setRemainingAnalyses] = useState(1)
   const [hasUsedFreeAnalysis, setHasUsedFreeAnalysis] = useState(false)
+  const [pendingCheckoutPlan, setPendingCheckoutPlan] = useState<PaidPlan | null>(null)
+  const [checkoutLoadingPlan, setCheckoutLoadingPlan] = useState<PaidPlan | null>(null)
 
   const maxAnalyses = userPlan === "business" ? 100 : userPlan === "pro" ? 30 : 1
+
+  useEffect(() => {
+    const isAnon = Boolean((session?.user as { is_anonymous?: boolean } | undefined)?.is_anonymous)
+    const authenticated = Boolean(session?.user) && !isAnon
+    setIsAuthenticated(authenticated)
+
+    if (!authenticated || !session?.user) {
+      setUserPlan("free")
+      return
+    }
+    const supabase = createBrowserSupabase()
+    supabase
+      .from("users")
+      .select("plan")
+      .eq("id", session.user.id)
+      .single()
+      .then(({ data }) => {
+        if (data?.plan) setUserPlan(data.plan as PlanType)
+      })
+  }, [session])
+
+  const beginStripeCheckout = useCallback(
+    async (plan: PaidPlan) => {
+      if (!isAuthenticated || !session?.access_token) {
+        setPendingCheckoutPlan(plan)
+        setShowSignupModal(true)
+        return
+      }
+      setCheckoutLoadingPlan(plan)
+      try {
+        const res = await fetch("/api/stripe/checkout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ plan }),
+        })
+        const data = (await res.json()) as { url?: string; message?: string; error?: string }
+        if (!res.ok || !data.url) {
+          throw new Error(data.message || data.error || "チェックアウトの作成に失敗しました")
+        }
+        window.location.href = data.url
+      } catch (e) {
+        alert(e instanceof Error ? e.message : "チェックアウトに失敗しました")
+      } finally {
+        setCheckoutLoadingPlan(null)
+      }
+    },
+    [isAuthenticated, session]
+  )
 
   const handleGetStarted = useCallback(() => {
     setScreen("mode-selection")
@@ -57,13 +115,18 @@ export default function Home() {
     }
   }, [])
 
-  const handlePlanSelect = useCallback((plan: string) => {
-    if (plan === "free") {
-      setScreen("mode-selection")
-    } else {
-      setShowSignupModal(true)
-    }
-  }, [])
+  const handlePlanSelect = useCallback(
+    async (plan: string) => {
+      if (plan === "free") {
+        setScreen("mode-selection")
+        return
+      }
+      if (plan === "pro" || plan === "business") {
+        await beginStripeCheckout(plan)
+      }
+    },
+    [beginStripeCheckout]
+  )
 
   const handleSelectMode = useCallback((mode: AnalysisMode) => {
     setSelectedMode(mode)
@@ -123,12 +186,17 @@ export default function Home() {
     setReferenceInsights(null)
   }, [])
 
-  const handleSignup = useCallback((method: "google" | "email", email?: string) => {
-    setIsAuthenticated(true)
+  const handleAuthSuccess = useCallback(async () => {
     setShowSignupModal(false)
-    setUserPlan("pro")
-    setRemainingAnalyses(30)
-  }, [])
+    await refreshSession()
+  }, [refreshSession])
+
+  useEffect(() => {
+    if (!pendingCheckoutPlan) return
+    if (!isAuthenticated) return
+    void beginStripeCheckout(pendingCheckoutPlan)
+    setPendingCheckoutPlan(null)
+  }, [pendingCheckoutPlan, isAuthenticated, beginStripeCheckout])
 
   useEffect(() => {
     if (screen !== "results") return
@@ -203,9 +271,14 @@ export default function Home() {
         <Header onPricingClick={handlePricingClick} onGetStartedClick={handleGetStarted} />
         <main className="bg-[#060810]">
           <LandingHero onGetStarted={handleGetStarted} />
-          <PricingSection onPlanSelect={handlePlanSelect} />
+          <PricingSection onPlanSelect={handlePlanSelect} checkoutLoadingPlan={checkoutLoadingPlan} />
           <FooterCTA onGetStarted={handleGetStarted} />
         </main>
+        <SignupModal
+          isOpen={showSignupModal}
+          onClose={() => setShowSignupModal(false)}
+          onAuthSuccess={handleAuthSuccess}
+        />
       </>
     )
   }
@@ -215,13 +288,7 @@ export default function Home() {
   }
 
   if (screen === "input") {
-    return (
-      <UrlInputScreen
-        onAnalyze={handleAnalyze}
-        onBack={handleBackToModes}
-        mode={selectedMode}
-      />
-    )
+    return <UrlInputScreen onAnalyze={handleAnalyze} onBack={handleBackToModes} mode={selectedMode} />
   }
 
   if (screen === "processing") {
@@ -238,14 +305,16 @@ export default function Home() {
         analysisLoading={analysisLoading}
         referenceInsights={referenceInsights}
         onReset={handleReset}
+        onUpgrade={beginStripeCheckout}
         userPlan={userPlan}
         remainingAnalyses={remainingAnalyses}
         maxAnalyses={maxAnalyses}
+        isFirstFreeAnalysis={!isAuthenticated && !hasUsedFreeAnalysis}
       />
       <SignupModal
         isOpen={showSignupModal}
         onClose={() => setShowSignupModal(false)}
-        onSignup={handleSignup}
+        onAuthSuccess={handleAuthSuccess}
       />
     </>
   )

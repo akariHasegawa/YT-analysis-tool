@@ -3,10 +3,11 @@
 import { Check } from 'lucide-react'
 
 interface PricingProps {
-  onPlanSelect: (plan: string) => void
+  onPlanSelect: (plan: string) => void | Promise<void>
+  checkoutLoadingPlan?: "pro" | "business" | null
 }
 
-export function PricingSection({ onPlanSelect }: PricingProps) {
+export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: PricingProps) {
   return (
     <section id="pricing" className="flex flex-col items-center justify-center px-4 py-16 sm:py-24">
       {/* Header */}
@@ -70,9 +71,10 @@ export function PricingSection({ onPlanSelect }: PricingProps) {
 
             <button
               onClick={() => onPlanSelect('pro')}
+              disabled={checkoutLoadingPlan != null}
               className="w-full rounded-lg bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] px-4 py-2 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[rgba(99,102,241,0.4)]"
             >
-              Proを始める
+              {checkoutLoadingPlan === "pro" ? "チェックアウトへ接続中..." : "Proを始める"}
             </button>
           </div>
 
@@ -109,9 +111,10 @@ export function PricingSection({ onPlanSelect }: PricingProps) {
 
             <button
               onClick={() => onPlanSelect('business')}
+              disabled={checkoutLoadingPlan != null}
               className="w-full rounded-lg bg-gradient-to-r from-[#f59e0b] to-[#ef4444] px-4 py-2 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[rgba(245,158,11,0.4)]"
             >
-              Businessを始める
+              {checkoutLoadingPlan === "business" ? "チェックアウトへ接続中..." : "Businessを始める"}
             </button>
           </div>
         </div>
