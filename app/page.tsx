@@ -40,8 +40,8 @@ export default function Home() {
   // Auth & plan state
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
-  const [userPlan, setUserPlan] = useState<PlanType>("free")
-  const [remainingAnalyses, setRemainingAnalyses] = useState(1)
+  const [userPlan, setUserPlan] = useState<PlanType>("pro")
+  const [remainingAnalyses, setRemainingAnalyses] = useState(28)
   const [hasUsedFreeAnalysis, setHasUsedFreeAnalysis] = useState(false)
 
   const maxAnalyses = userPlan === "business" ? 100 : userPlan === "pro" ? 30 : 1
