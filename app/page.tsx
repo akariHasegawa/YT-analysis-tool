@@ -211,7 +211,15 @@ export default function Home() {
   }
 
   if (screen === "mode-selection") {
-    return <ModeSelection onSelectMode={handleSelectMode} onBack={handleBackToLanding} />
+    return (
+      <ModeSelection
+        onSelectMode={handleSelectMode}
+        onBack={handleBackToLanding}
+        userPlan={userPlan}
+        remainingAnalyses={remainingAnalyses}
+        maxAnalyses={maxAnalyses}
+      />
+    )
   }
 
   if (screen === "input") {

@@ -6,9 +6,20 @@ import { cn } from "@/lib/utils"
 
 export type AnalysisMode = "buzz" | "growth"
 
+type PlanType = "free" | "pro" | "business"
+
 interface ModeSelectionProps {
   onSelectMode: (mode: AnalysisMode) => void
   onBack: () => void
+  userPlan?: PlanType
+  remainingAnalyses?: number
+  maxAnalyses?: number
+}
+
+const PLAN_CONFIG: Record<PlanType, { label: string; color: string; bg: string; border: string }> = {
+  free:     { label: "Free",     color: "#9ca3af", bg: "rgba(156,163,175,0.1)", border: "rgba(156,163,175,0.3)" },
+  pro:      { label: "Pro",      color: "#6366f1", bg: "rgba(99,102,241,0.1)",  border: "rgba(99,102,241,0.3)"  },
+  business: { label: "Business", color: "#f59e0b", bg: "rgba(245,158,11,0.1)",  border: "rgba(245,158,11,0.3)"  },
 }
 
 const MODES = [
@@ -50,12 +61,35 @@ const MODES = [
   },
 ]
 
-export function ModeSelection({ onSelectMode, onBack }: ModeSelectionProps) {
+export function ModeSelection({ onSelectMode, onBack, userPlan = "free", remainingAnalyses = 1, maxAnalyses = 1 }: ModeSelectionProps) {
   const { t } = useLanguage()
+  const plan = PLAN_CONFIG[userPlan]
 
   return (
     <main className="relative flex min-h-[calc(100vh-4rem)] flex-col items-center px-4 pb-20 pt-8 sm:pt-12">
       <div className="mx-auto w-full max-w-xl">
+
+        {/* Plan Status Bar */}
+        <div
+          className="mb-6 flex items-center justify-between rounded-xl border px-4 py-3 animate-fade-up"
+          style={{ background: plan.bg, borderColor: plan.border }}
+        >
+          <div className="flex items-center gap-2">
+            <span
+              className="rounded-full px-2.5 py-0.5 text-xs font-bold"
+              style={{ color: plan.color, background: plan.border }}
+            >
+              {plan.label}
+            </span>
+            <span className="text-sm text-gray-300">プラン</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold" style={{ color: plan.color }}>
+              残り {remainingAnalyses} / {maxAnalyses} 回
+            </span>
+          </div>
+        </div>
+
         {/* Back button */}
         <button
           type="button"
