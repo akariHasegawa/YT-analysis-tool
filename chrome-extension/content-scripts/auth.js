@@ -40,9 +40,19 @@ function sendToPage() {
   })
 }
 
+// Initial load: try after delays
 setTimeout(sendToPage, 800)
 setTimeout(sendToPage, 2500)
 
+// Page ready signal
 window.addEventListener('message', (e) => {
   if (e.data?.type === 'AIAI_PAGE_READY') sendToPage()
+})
+
+// Background worker signals existing tab to check for pending data
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.type === 'AIAI_CHECK_PENDING') {
+    sent = false // reset so sendToPage runs again
+    sendToPage()
+  }
 })

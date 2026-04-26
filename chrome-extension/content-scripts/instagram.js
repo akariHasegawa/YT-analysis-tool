@@ -133,14 +133,12 @@ async function handleAnalyze() {
 
   const data = scrapeData()
 
-  chrome.storage.local.set({ aiai_pending: data }, () => {
-    window.open(AIAI_URL, '_blank')
-    setTimeout(() => {
-      btn.textContent = '分析する'
-      btn.style.opacity = '1'
-      btn.style.pointerEvents = 'auto'
-    }, 2000)
-  })
+  chrome.runtime.sendMessage({ type: 'OPEN_AIAI', data })
+  setTimeout(() => {
+    btn.textContent = '分析する'
+    btn.style.opacity = '1'
+    btn.style.pointerEvents = 'auto'
+  }, 2000)
 }
 
 function injectButton() {

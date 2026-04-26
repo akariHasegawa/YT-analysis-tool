@@ -3,7 +3,10 @@
   "name": "AIAI-short 分析ツール",
   "version": "1.0.0",
   "description": "TikTok・Instagram Reelsの動画データを自動収集してAIAI-shortで分析",
-  "permissions": ["storage", "tabs"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["storage", "tabs", "windows"],
   "host_permissions": [
     "https://www.tiktok.com/*",
     "https://tiktok.com/*",
