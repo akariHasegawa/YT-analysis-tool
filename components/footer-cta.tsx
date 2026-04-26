@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 
 interface FooterCTAProps {
@@ -23,6 +24,11 @@ export function FooterCTA({ onGetStarted }: FooterCTAProps) {
         すぐに分析してみる
         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
       </button>
+      <div className="mt-12 flex items-center gap-4 text-xs text-gray-600">
+        <Link href="/terms" className="transition-colors hover:text-gray-400">利用規約</Link>
+        <span>·</span>
+        <Link href="/faq" className="transition-colors hover:text-gray-400">よくある質問</Link>
+      </div>
     </section>
   )
 }
