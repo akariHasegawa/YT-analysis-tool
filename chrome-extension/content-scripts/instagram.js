@@ -144,7 +144,7 @@ async function handleAnalyze() {
 }
 
 function isReelsPage() {
-  return /instagram\.com\/(reels?|p)\//.test(location.href)
+  return /\/(reel|reels|p)\/[A-Za-z0-9_-]+/.test(location.href)
 }
 
 function injectButton() {
