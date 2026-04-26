@@ -121,6 +121,8 @@ export default function Home() {
     }
 
     window.addEventListener('message', handler)
+    // Signal to content script that the page is ready to receive extension data
+    window.postMessage({ type: 'AIAI_PAGE_READY' }, window.location.origin)
     return () => window.removeEventListener('message', handler)
   }, [])
 

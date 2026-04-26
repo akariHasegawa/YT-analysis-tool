@@ -22,11 +22,7 @@
       "run_at": "document_idle"
     },
     {
-      "matches": [
-        "https://www.instagram.com/reels/*",
-        "https://www.instagram.com/reel/*",
-        "https://www.instagram.com/p/*"
-      ],
+      "matches": ["https://www.instagram.com/*"],
       "js": ["content-scripts/instagram.js"],
       "run_at": "document_idle"
     }
