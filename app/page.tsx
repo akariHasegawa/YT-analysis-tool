@@ -28,7 +28,7 @@ export default function Home() {
   const tRef = useRef(t)
   tRef.current = t
 
-  const { session, refreshSession, supabase } = useSupabaseAuth()
+  const { session, refreshSession, supabase, isLoading: authLoading } = useSupabaseAuth()
 
   // Screen flow state
   const [screen, setScreen] = useState<Screen>("landing")
@@ -63,6 +63,12 @@ export default function Home() {
     likes: number | null
     comments: number | null
     captions: string
+  } | null>(null)
+  const [pendingExtensionPayload, setPendingExtensionPayload] = useState<{
+    url: string
+    title: string
+    channelName: string
+    extensionData: { views: number | null; likes: number | null; comments: number | null; captions: string }
   } | null>(null)
 
   const maxAnalyses = userPlan === "business" ? 100 : userPlan === "pro" ? 30 : 1
@@ -110,26 +116,8 @@ export default function Home() {
       }
       if (!d?.url) return
 
-      setPendingExtensionData(d.extensionData)
-      setAnalyzedUrl(d.url)
-      setVideoInfo({
-        title: d.title || d.url,
-        channelName: d.channelName || '',
-        thumbnailUrl: '',
-        authorUrl: null,
-        thumbnailWidth: null,
-        thumbnailHeight: null,
-        providerName: null,
-        videoId: null,
-        publishedAt: null,
-        thumbnails: {},
-        views: d.extensionData?.views ?? null,
-        durationSeconds: null,
-        likeCount: d.extensionData?.likes ?? null,
-      })
-      setMetadataError(undefined)
-      setSelectedMode('buzz')
-      setScreen('results')
+      // Store payload; actual screen switch happens after auth is confirmed loaded
+      setPendingExtensionPayload(d)
     }
 
     window.addEventListener('message', handler)
@@ -166,6 +154,33 @@ export default function Home() {
     },
     [isAuthenticated, session]
   )
+
+  // Process extension payload once auth loading is complete
+  useEffect(() => {
+    if (authLoading || !pendingExtensionPayload) return
+    const d = pendingExtensionPayload
+    setPendingExtensionPayload(null)
+    setPendingExtensionData(d.extensionData)
+    setAnalyzedUrl(d.url)
+    setVideoInfo({
+      title: d.title || d.url,
+      channelName: d.channelName || '',
+      thumbnailUrl: '',
+      authorUrl: null,
+      thumbnailWidth: null,
+      thumbnailHeight: null,
+      providerName: null,
+      videoId: null,
+      publishedAt: null,
+      thumbnails: {},
+      views: d.extensionData?.views ?? null,
+      durationSeconds: null,
+      likeCount: d.extensionData?.likes ?? null,
+    })
+    setMetadataError(undefined)
+    setSelectedMode('buzz')
+    setScreen('results')
+  }, [authLoading, pendingExtensionPayload])
 
   const handleGetStarted = useCallback(() => {
     setScreen("mode-selection")
