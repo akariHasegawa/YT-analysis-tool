@@ -102,6 +102,16 @@ export default function Home() {
       })
   }, [session, supabase])
 
+  // Auto-save session to extension whenever user logs in
+  useEffect(() => {
+    if (!session?.access_token) return
+    const isAnon = Boolean((session?.user as { is_anonymous?: boolean } | undefined)?.is_anonymous)
+    if (isAnon) return
+    window.dispatchEvent(new CustomEvent('aiai-session-update', {
+      detail: { access_token: session.access_token, refresh_token: session.refresh_token }
+    }))
+  }, [session])
+
   // Receive messages from Chrome extension (via auth.js content script)
   useEffect(() => {
     const handler = (e: MessageEvent) => {
