@@ -9,16 +9,18 @@ import { ModeSelection, type AnalysisMode } from "@/components/mode-selection"
 import { UrlInputScreen } from "@/components/url-input-screen"
 import { ProcessingScreen } from "@/components/processing-screen"
 import { ResultsScreen } from "@/components/results-screen"
+import { MultiUrlInputScreen } from "@/components/multi-url-input-screen"
+import { MultiResultsScreen } from "@/components/multi-results-screen"
 import { SignupModal } from "@/components/signup-modal"
 import type { ShortsAnalysis } from "@/lib/shorts-analysis"
 import type { ReferenceInsightsPayload } from "@/lib/reference-insights"
 import type { VideoInfo } from "@/lib/video-info"
 import type { PlanType } from "@/components/upgrade-modal"
+import type { MultiVideoAnalysis } from "@/lib/multi-video-analysis"
 import { useLanguage } from "@/lib/language-context"
 import { useSupabaseAuth } from "@/components/supabase-auth-provider"
-import { createBrowserSupabase } from "@/lib/supabase"
 
-type Screen = "landing" | "mode-selection" | "input" | "processing" | "results"
+type Screen = "landing" | "mode-selection" | "input" | "processing" | "results" | "multi-input" | "multi-results"
 type PaidPlan = "pro" | "business"
 
 export default function Home() {
@@ -26,7 +28,7 @@ export default function Home() {
   const tRef = useRef(t)
   tRef.current = t
 
-  const { session, refreshSession } = useSupabaseAuth()
+  const { session, refreshSession, supabase } = useSupabaseAuth()
 
   // Screen flow state
   const [screen, setScreen] = useState<Screen>("landing")
@@ -51,6 +53,18 @@ export default function Home() {
   const [pendingCheckoutPlan, setPendingCheckoutPlan] = useState<PaidPlan | null>(null)
   const [checkoutLoadingPlan, setCheckoutLoadingPlan] = useState<PaidPlan | null>(null)
 
+  // Multi-video analysis state
+  const [multiAnalysis, setMultiAnalysis] = useState<MultiVideoAnalysis | null>(null)
+  const [multiAnalyzedUrls, setMultiAnalyzedUrls] = useState<string[]>([])
+
+  // Chrome extension data
+  const [pendingExtensionData, setPendingExtensionData] = useState<{
+    views: number | null
+    likes: number | null
+    comments: number | null
+    captions: string
+  } | null>(null)
+
   const maxAnalyses = userPlan === "business" ? 100 : userPlan === "pro" ? 30 : 1
 
   useEffect(() => {
@@ -62,16 +76,65 @@ export default function Home() {
       setUserPlan("free")
       return
     }
-    const supabase = createBrowserSupabase()
+    if (!supabase) return
     supabase
       .from("users")
-      .select("plan")
+      .select("plan, analysis_count_month")
       .eq("id", session.user.id)
       .single()
       .then(({ data }) => {
-        if (data?.plan) setUserPlan(data.plan as PlanType)
+        if (data?.plan) {
+          const plan = data.plan as PlanType
+          setUserPlan(plan)
+          const max = plan === "business" ? 100 : plan === "pro" ? 30 : 1
+          const used = data.analysis_count_month ?? 0
+          setRemainingAnalyses(Math.max(0, max - used))
+        }
       })
-  }, [session])
+  }, [session, supabase])
+
+  // Receive pending analysis data from Chrome extension (via auth.js content script)
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (
+        e.origin !== 'https://yt-analysis-tool-mu.vercel.app' &&
+        e.origin !== window.location.origin
+      ) return
+      if (e.data?.type !== 'AIAI_EXTENSION_PENDING') return
+
+      const d = e.data.data as {
+        url: string
+        title: string
+        channelName: string
+        extensionData: { views: number | null; likes: number | null; comments: number | null; captions: string }
+      }
+      if (!d?.url) return
+
+      setPendingExtensionData(d.extensionData)
+      setAnalyzedUrl(d.url)
+      setVideoInfo({
+        title: d.title || d.url,
+        channelName: d.channelName || '',
+        thumbnailUrl: '',
+        authorUrl: null,
+        thumbnailWidth: null,
+        thumbnailHeight: null,
+        providerName: null,
+        videoId: null,
+        publishedAt: null,
+        thumbnails: {},
+        views: d.extensionData?.views ?? null,
+        durationSeconds: null,
+        likeCount: d.extensionData?.likes ?? null,
+      })
+      setMetadataError(undefined)
+      setSelectedMode('buzz')
+      setScreen('results')
+    }
+
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  }, [])
 
   const beginStripeCheckout = useCallback(
     async (plan: PaidPlan) => {
@@ -130,7 +193,17 @@ export default function Home() {
 
   const handleSelectMode = useCallback((mode: AnalysisMode) => {
     setSelectedMode(mode)
-    setScreen("input")
+    if (mode === "multi") {
+      setScreen("multi-input")
+    } else {
+      setScreen("input")
+    }
+  }, [])
+
+  const handleMultiResults = useCallback((analysis: MultiVideoAnalysis, urls: string[]) => {
+    setMultiAnalysis(analysis)
+    setMultiAnalyzedUrls(urls)
+    setScreen("multi-results")
   }, [])
 
   const handleBackToLanding = useCallback(() => {
@@ -209,9 +282,13 @@ export default function Home() {
 
     ;(async () => {
       try {
+        const analyzeHeaders: Record<string, string> = { "Content-Type": "application/json" }
+        if (session?.access_token) {
+          analyzeHeaders["Authorization"] = `Bearer ${session.access_token}`
+        }
         const res = await fetch("/api/analyze", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: analyzeHeaders,
           body: JSON.stringify({
             url: analyzedUrl,
             title: videoInfo.title,
@@ -222,6 +299,7 @@ export default function Home() {
             thumbnailUrl: videoInfo.thumbnailUrl,
             competitorUrl: competitorUrl,
             mode: selectedMode,
+            ...(pendingExtensionData ? { extensionData: pendingExtensionData } : {}),
           }),
           signal: ac.signal,
         })
@@ -268,7 +346,7 @@ export default function Home() {
   if (screen === "landing") {
     return (
       <>
-        <Header onPricingClick={handlePricingClick} onGetStartedClick={handleGetStarted} />
+        <Header onPricingClick={handlePricingClick} onGetStartedClick={handleGetStarted} onLoginClick={() => setShowSignupModal(true)} />
         <main className="bg-[#060810]">
           <LandingHero onGetStarted={handleGetStarted} />
           <PricingSection onPlanSelect={handlePlanSelect} checkoutLoadingPlan={checkoutLoadingPlan} />
@@ -284,11 +362,19 @@ export default function Home() {
   }
 
   if (screen === "mode-selection") {
-    return <ModeSelection onSelectMode={handleSelectMode} onBack={handleBackToLanding} />
+    return <ModeSelection onSelectMode={handleSelectMode} onBack={handleBackToLanding} userPlan={userPlan} remainingAnalyses={remainingAnalyses} maxAnalyses={maxAnalyses} />
   }
 
   if (screen === "input") {
     return <UrlInputScreen onAnalyze={handleAnalyze} onBack={handleBackToModes} mode={selectedMode} />
+  }
+
+  if (screen === "multi-input") {
+    return <MultiUrlInputScreen onBack={handleBackToModes} onResults={handleMultiResults} />
+  }
+
+  if (screen === "multi-results" && multiAnalysis) {
+    return <MultiResultsScreen analysis={multiAnalysis} urls={multiAnalyzedUrls} onReset={handleReset} />
   }
 
   if (screen === "processing") {

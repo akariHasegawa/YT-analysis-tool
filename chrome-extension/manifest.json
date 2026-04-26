@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "AIAI-short 分析ツール",
+  "version": "1.0.0",
+  "description": "TikTok・Instagram Reelsの動画データを自動収集してAIAI-shortで分析",
+  "permissions": ["storage", "tabs"],
+  "host_permissions": [
+    "https://www.tiktok.com/*",
+    "https://tiktok.com/*",
+    "https://www.instagram.com/*",
+    "https://yt-analysis-tool-mu.vercel.app/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://yt-analysis-tool-mu.vercel.app/*"],
+      "js": ["content-scripts/auth.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.tiktok.com/*", "https://tiktok.com/*"],
+      "js": ["content-scripts/tiktok.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.instagram.com/reels/*",
+        "https://www.instagram.com/reel/*",
+        "https://www.instagram.com/p/*"
+      ],
+      "js": ["content-scripts/instagram.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html"
+  }
+}

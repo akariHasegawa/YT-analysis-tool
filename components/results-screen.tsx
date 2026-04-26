@@ -24,6 +24,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import { LockedFeature, PlanBadge } from "@/components/locked-feature"
+import { ReportDownload } from "@/components/report-download"
 import { UpgradeModal, type PlanType } from "@/components/upgrade-modal"
 import { cn } from "@/lib/utils"
 import type { VideoInfo } from "@/lib/video-info"
@@ -136,32 +137,53 @@ export function ResultsScreen({
   }
   
   // Feature access based on plan
+  type CastCount = "1" | "2" | "3+"
   type PromptState = {
     loading: "script" | "video" | null
     scriptPrompt: string | null
     videoPrompt: string | null
     open: "script" | "video" | null
     copied: boolean
+    scriptSettingsOpen: boolean
+    castCount: CastCount
+    dialogueStyle: string
   }
   const [promptStates, setPromptStates] = useState<Record<number, PromptState>>({})
 
   const getPromptState = (i: number): PromptState =>
-    promptStates[i] ?? { loading: null, scriptPrompt: null, videoPrompt: null, open: null, copied: false }
+    promptStates[i] ?? {
+      loading: null,
+      scriptPrompt: null,
+      videoPrompt: null,
+      open: null,
+      copied: false,
+      scriptSettingsOpen: false,
+      castCount: "1",
+      dialogueStyle: "",
+    }
+
+  const toggleScriptSettings = (i: number) => {
+    setPromptStates((prev) => ({
+      ...prev,
+      [i]: { ...getPromptState(i), scriptSettingsOpen: !getPromptState(i).scriptSettingsOpen, open: null },
+    }))
+  }
 
   const generatePrompt = async (i: number, promptType: "script" | "video") => {
     if (!analysis) return
     const state = getPromptState(i)
-    const cached = promptType === "script" ? state.scriptPrompt : state.videoPrompt
-    if (cached) {
-      setPromptStates((prev) => ({
-        ...prev,
-        [i]: { ...getPromptState(i), open: promptType, copied: false },
-      }))
-      return
+
+    // video はキャッシュ優先
+    if (promptType === "video") {
+      if (state.videoPrompt) {
+        setPromptStates((prev) => ({ ...prev, [i]: { ...getPromptState(i), open: "video", copied: false } }))
+        return
+      }
     }
+
     setPromptStates((prev) => ({
       ...prev,
-      [i]: { ...getPromptState(i), loading: promptType, open: null },
+      [i]: { ...getPromptState(i), loading: promptType, open: null, scriptSettingsOpen: false },
     }))
     try {
       const res = await fetch("/api/generate-prompt", {
@@ -170,6 +192,8 @@ export function ResultsScreen({
         body: JSON.stringify({
           idea: analysis.nextVideoIdeas[i],
           promptType,
+          castCount: state.castCount,
+          dialogueStyle: state.dialogueStyle,
           context: {
             channelName,
             hook: analysis.hook.value,
@@ -477,6 +501,13 @@ export function ResultsScreen({
               </section>
             ) : null}
 
+            {analysis && userPlan === "business" && videoInfo ? (
+              <section className="space-y-4">
+                <SectionLabel>レポート生成</SectionLabel>
+                <ReportDownload analysis={analysis} videoInfo={videoInfo} />
+              </section>
+            ) : null}
+
             {analysis ? (
               <LockedFeature isLocked={isProLocked} requiredPlan="pro" onUpgradeClick={handleUpgradeClick}>
                 <section className="space-y-4">
@@ -503,11 +534,11 @@ export function ResultsScreen({
                             <div className="flex gap-2 px-4 pb-4">
                               <button
                                 type="button"
-                                onClick={() => generatePrompt(i, "script")}
+                                onClick={() => toggleScriptSettings(i)}
                                 disabled={ps.loading !== null}
                                 className={cn(
                                   "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
-                                  ps.open === "script"
+                                  ps.scriptSettingsOpen || ps.open === "script"
                                     ? "bg-[oklch(0.45_0.18_250)] text-white"
                                     : "bg-[oklch(0.25_0.08_270_/_0.6)] text-[oklch(0.78_0.12_260)] hover:bg-[oklch(0.35_0.12_260_/_0.7)]",
                                   ps.loading === "script" && "opacity-60 cursor-not-allowed"
@@ -532,6 +563,79 @@ export function ResultsScreen({
                                 {ps.loading === "video" ? "生成中..." : "動画プロンプト"}
                               </button>
                             </div>
+
+                            {/* 台本設定アコーディオン */}
+                            {ps.scriptSettingsOpen && (
+                              <div className="border-t border-[oklch(0.5_0.1_270_/_0.15)] px-4 pb-4 pt-3 space-y-4 bg-[oklch(0.12_0.04_280_/_0.4)]">
+                                {/* 登場人数 */}
+                                <div className="space-y-2">
+                                  <p className="text-xs font-semibold text-[oklch(0.75_0.1_260)]">
+                                    登場人数
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground/70">
+                                    1人＝ナレーション形式　2人以上＝対話形式の台本を生成します
+                                  </p>
+                                  <div className="flex gap-2">
+                                    {(["1", "2", "3+"] as const).map((c) => {
+                                      const labels: Record<string, string> = { "1": "1人", "2": "2人", "3+": "3人以上" }
+                                      const isSelected = ps.castCount === c
+                                      return (
+                                        <button
+                                          key={c}
+                                          type="button"
+                                          onClick={() =>
+                                            setPromptStates((prev) => ({
+                                              ...prev,
+                                              [i]: { ...getPromptState(i), castCount: c, scriptPrompt: null },
+                                            }))
+                                          }
+                                          className={cn(
+                                            "rounded-lg px-3 py-1.5 text-xs font-semibold transition-all border",
+                                            isSelected
+                                              ? "bg-[oklch(0.45_0.18_250)] text-white border-[oklch(0.5_0.2_250)]"
+                                              : "bg-[oklch(0.2_0.06_270_/_0.5)] text-muted-foreground border-[oklch(0.4_0.08_270_/_0.3)] hover:border-[oklch(0.5_0.1_270_/_0.5)]"
+                                          )}
+                                        >
+                                          {labels[c]}
+                                        </button>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+
+                                {/* 対話の雰囲気 */}
+                                <div className="space-y-2">
+                                  <p className="text-xs font-semibold text-[oklch(0.75_0.1_260)]">
+                                    対話の雰囲気・スタイル（任意）
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground/70">
+                                    例：白熱した議論　冷静な解説　コミカル　感動的　緊迫感あり
+                                  </p>
+                                  <input
+                                    type="text"
+                                    value={ps.dialogueStyle}
+                                    onChange={(e) =>
+                                      setPromptStates((prev) => ({
+                                        ...prev,
+                                        [i]: { ...getPromptState(i), dialogueStyle: e.target.value, scriptPrompt: null },
+                                      }))
+                                    }
+                                    placeholder="例：冷静な解説スタイルで"
+                                    className="w-full rounded-lg border border-[oklch(0.4_0.08_270_/_0.3)] bg-[oklch(0.15_0.05_270_/_0.5)] px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-[oklch(0.55_0.15_260_/_0.6)] focus:outline-none"
+                                  />
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => generatePrompt(i, "script")}
+                                  disabled={ps.loading !== null}
+                                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[oklch(0.45_0.18_250)] py-2 text-xs font-semibold text-white transition-all hover:bg-[oklch(0.5_0.2_250)] disabled:opacity-60"
+                                >
+                                  <FileText className="h-3.5 w-3.5" />
+                                  {ps.loading === "script" ? "生成中..." : "この設定で台本プロンプトを生成"}
+                                </button>
+                              </div>
+                            )}
                             {/* 生成されたプロンプト表示 */}
                             {ps.open && activePrompt && (
                               <div className="border-t border-[oklch(0.5_0.1_270_/_0.15)] mx-0">

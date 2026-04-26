@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ArrowRight, ArrowLeft, PlayCircle, Users, Search, Rocket, FileText, Lightbulb, TrendingUp, Sparkles } from "lucide-react"
 import { isLikelyYouTubeUrl } from "@/lib/youtube-video-id"
+import { detectPlatform } from "@/lib/platforms/types"
 import { DEFAULT_SAMPLE_SHORT_URLS } from "@/lib/default-sample-urls"
 import { cn } from "@/lib/utils"
 import type { AnalysisMode } from "@/components/mode-selection"
@@ -61,9 +62,13 @@ export function UrlInputScreen({ onAnalyze, onBack, mode = "buzz" }: UrlInputScr
   const [competitorError, setCompetitorError] = useState("")
   const [videoType, setVideoType] = useState<VideoType>("short")
 
-  const styles = MODE_STYLES[mode]
+  const styles = MODE_STYLES[mode as keyof typeof MODE_STYLES] ?? MODE_STYLES.buzz
   const ModeIcon = styles.icon
   const isGrowthMode = mode === "growth"
+
+  const detectedPlatform = detectPlatform(url.trim())
+  const isYouTube = detectedPlatform === "youtube" || detectedPlatform === null
+  const showVideoTypeSelector = isYouTube
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -72,8 +77,8 @@ export function UrlInputScreen({ onAnalyze, onBack, mode = "buzz" }: UrlInputScr
     if (!url.trim()) {
       setError(t("input.error.required"))
       hasError = true
-    } else if (!isLikelyYouTubeUrl(url.trim())) {
-      setError(t("input.error.invalidYoutube"))
+    } else if (!detectPlatform(url.trim())) {
+      setError("YouTube・TikTok・Instagram のURLを入力してください")
       hasError = true
     }
 
@@ -144,38 +149,40 @@ export function UrlInputScreen({ onAnalyze, onBack, mode = "buzz" }: UrlInputScr
           style={{ borderColor: styles.borderAccent }}
         >
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-            {/* Video type selector */}
-            <div className="flex flex-col gap-3">
-              <label className="text-sm font-medium text-foreground/90">{t("input.videoType")}</label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setVideoType("short")}
-                  className={cn(
-                    "rounded-xl border py-3 text-sm font-semibold transition-all",
-                    videoType === "short"
-                      ? "border-transparent shadow-lg text-white"
-                      : "border-[oklch(0.5_0.1_270_/_0.25)] bg-[oklch(0.18_0.05_280_/_0.4)] text-muted-foreground hover:border-[oklch(0.55_0.14_270_/_0.35)] hover:text-foreground"
-                  )}
-                  style={videoType === "short" ? { background: styles.buttonBg } : {}}
-                >
-                  {t("input.videoType.short")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVideoType("regular")}
-                  className={cn(
-                    "rounded-xl border py-3 text-sm font-semibold transition-all",
-                    videoType === "regular"
-                      ? "border-transparent shadow-lg text-white"
-                      : "border-[oklch(0.5_0.1_270_/_0.25)] bg-[oklch(0.18_0.05_280_/_0.4)] text-muted-foreground hover:border-[oklch(0.55_0.14_270_/_0.35)] hover:text-foreground"
-                  )}
-                  style={videoType === "regular" ? { background: styles.buttonBg } : {}}
-                >
-                  {t("input.videoType.regular")}
-                </button>
+            {/* Video type selector: YouTube のみ表示 */}
+            {showVideoTypeSelector && (
+              <div className="flex flex-col gap-3">
+                <label className="text-sm font-medium text-foreground/90">{t("input.videoType")}</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setVideoType("short")}
+                    className={cn(
+                      "rounded-xl border py-3 text-sm font-semibold transition-all",
+                      videoType === "short"
+                        ? "border-transparent shadow-lg text-white"
+                        : "border-[oklch(0.5_0.1_270_/_0.25)] bg-[oklch(0.18_0.05_280_/_0.4)] text-muted-foreground hover:border-[oklch(0.55_0.14_270_/_0.35)] hover:text-foreground"
+                    )}
+                    style={videoType === "short" ? { background: styles.buttonBg } : {}}
+                  >
+                    {t("input.videoType.short")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVideoType("regular")}
+                    className={cn(
+                      "rounded-xl border py-3 text-sm font-semibold transition-all",
+                      videoType === "regular"
+                        ? "border-transparent shadow-lg text-white"
+                        : "border-[oklch(0.5_0.1_270_/_0.25)] bg-[oklch(0.18_0.05_280_/_0.4)] text-muted-foreground hover:border-[oklch(0.55_0.14_270_/_0.35)] hover:text-foreground"
+                    )}
+                    style={videoType === "regular" ? { background: styles.buttonBg } : {}}
+                  >
+                    {t("input.videoType.regular")}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Main URL input */}
             <div className="flex flex-col gap-2">

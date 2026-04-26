@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
   import { z } from "zod"
-  import { extractYouTubeVideoId, isLikelyYouTubeUrl } from "@/lib/youtube-video-id"
-  import { fetchYouTubeTranscriptLines } from "@/lib/youtube-transcript-lines"
   import { structureTimelineFieldKeys } from "@/lib/structure-timeline"
+  import { detectPlatform } from "@/lib/platforms/types"
+  import { youtubePlatform } from "@/lib/platforms/youtube"
+  import { tiktokPlatform } from "@/lib/platforms/tiktok"
+  import { instagramPlatform } from "@/lib/platforms/instagram"
   import {
     formatSheetImprovementLines,
     formatSheetImprovementTags,
@@ -33,17 +35,24 @@ import { NextRequest, NextResponse } from "next/server"
     return Number.isFinite(n) && n >= 0 ? n : 0
   }
 
-  function detectPlatform(url: string): string {
-    const u = url.toLowerCase()
-    if (u.includes("tiktok.com")) return "tiktok"
-    if (u.includes("instagram.com") && (u.includes("/reels") || u.includes("reels"))) return "instagram_reels"
-    if (u.includes("youtube.com") && u.includes("/shorts")) return "youtube_shorts"
-    if (u.includes("youtu.be") && u.includes("/")) return "youtube_shorts"
-    return "unknown"
+  const platformAdapters = [youtubePlatform, tiktokPlatform, instagramPlatform]
+
+  function getPlatformAdapter(url: string) {
+    return platformAdapters.find((a) => a.detect(url)) ?? null
   }
 
   function detectVideoType(url: string): "shorts" | "long" {
-    return url.toLowerCase().includes("/shorts/") ? "shorts" : "long"
+    const u = url.toLowerCase()
+    if (u.includes("tiktok.com") || u.includes("instagram.com")) return "shorts"
+    return u.includes("/shorts/") ? "shorts" : "long"
+  }
+
+  function getPlatformSheetLabel(url: string): string {
+    const u = url.toLowerCase()
+    if (u.includes("tiktok.com")) return "TikTok"
+    if (u.includes("instagram.com")) return "Instagram Reels"
+    if (u.includes("/shorts/") || u.includes("youtu.be")) return "YouTube ショート"
+    return "YouTube 通常動画"
   }
 
   function mergeCookiesFromResponse(cookieJar: string, res: Response): string {
@@ -176,6 +185,15 @@ import { NextRequest, NextResponse } from "next/server"
         return m === "buzz" ? "research" : m
       }),
     competitorUrl: z.string().nullish(),
+    /** Chrome拡張から送られる数値データ（TikTok・Instagram用） */
+    extensionData: z
+      .object({
+        views: z.number().nullable().optional(),
+        likes: z.number().nullable().optional(),
+        comments: z.number().nullable().optional(),
+        captions: z.string().optional().default(""),
+      })
+      .optional(),
   })
 
   export async function POST(req: NextRequest) {
@@ -199,11 +217,17 @@ import { NextRequest, NextResponse } from "next/server"
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
     }
 
-    const { url, title, channelName, publishedAt, viewCount, duration, thumbnailUrl, mode, competitorUrl } =
+    const { url, title, channelName, publishedAt, viewCount, duration, thumbnailUrl, mode, competitorUrl, extensionData } =
       parsed.data
-    if (!isLikelyYouTubeUrl(url)) {
-      return NextResponse.json({ error: "YouTube のURLではない可能性があります" }, { status: 400 })
+
+    const platform = detectPlatform(url)
+    if (!platform) {
+      return NextResponse.json(
+        { error: "YouTube・TikTok・Instagram のURLではない可能性があります" },
+        { status: 400 }
+      )
     }
+    const adapter = getPlatformAdapter(url)!
 
     const authHeader = req.headers.get("authorization")
     const accessToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : null
@@ -251,34 +275,24 @@ import { NextRequest, NextResponse } from "next/server"
     const hasCompetitorUrl = competitorUrlTrimmed.length > 0
 
     // ★ 字幕を先に取得してメイン分析にも使う
-    const vid = extractYouTubeVideoId(url)
+    // YouTube: APIで取得 / TikTok・Instagram: Chrome拡張のcaptionsを使用
     let transcript = ""
-    if (vid) {
-      try {
-        const t = await fetchYouTubeTranscriptLines(vid, { durationHintSec: duration ?? null })
-        if (t?.trim()) transcript = t.trim()
-      } catch {
-        transcript = ""
-      }
+    if (platform === "youtube") {
+      transcript = await adapter.fetchTranscript(url, { durationHintSec: duration ?? null })
+    } else if (extensionData?.captions) {
+      transcript = extensionData.captions
     }
 
     let competitorTranscript = ""
-    if (hasCompetitorUrl && isLikelyYouTubeUrl(competitorUrlTrimmed)) {
-      const cvid = extractYouTubeVideoId(competitorUrlTrimmed)
-      if (cvid) {
-        try {
-          const ct = await fetchYouTubeTranscriptLines(cvid, { durationHintSec: null })
-          if (ct?.trim()) competitorTranscript = ct.trim()
-        } catch {
-          competitorTranscript = ""
-        }
-      }
+    if (hasCompetitorUrl && detectPlatform(competitorUrlTrimmed) === "youtube") {
+      const competitorAdapter = youtubePlatform
+      competitorTranscript = await competitorAdapter.fetchTranscript(competitorUrlTrimmed, { durationHintSec: null })
     }
 
     const competitorBlock = hasCompetitorUrl
       ? `\n--- 競合動画（比較対象） ---\n動画URL: ${competitorUrlTrimmed}\n${
-          !isLikelyYouTubeUrl(competitorUrlTrimmed)
-            ? "※YouTubeのURLとして解釈できません。字幕は取得していません。\n"
+          !detectPlatform(competitorUrlTrimmed)
+            ? "※対応プラットフォームのURLとして解釈できません。字幕は取得していません。\n"
             : ""
         }${
           competitorTranscript
@@ -433,7 +447,7 @@ ${competitorBlock}
 
       const payload = {
         analyzedAt,
-        platform: detectPlatform(url),
+        platform: getPlatformSheetLabel(url),
         videoType,
         sheetColE_shorts,
         sheetColF_regular,
