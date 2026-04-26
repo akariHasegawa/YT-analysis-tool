@@ -150,6 +150,8 @@ export default function TermsPage() {
           <Link href="/" className="hover:text-gray-400">トップ</Link>
           <span className="mx-3">·</span>
           <Link href="/faq" className="hover:text-gray-400">よくある質問</Link>
+          <span className="mx-3">·</span>
+          <Link href="/contact" className="hover:text-gray-400">お問い合わせ</Link>
         </div>
       </div>
     </div>

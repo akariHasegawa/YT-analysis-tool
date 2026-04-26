@@ -120,6 +120,8 @@ export default function FaqPage() {
           <Link href="/" className="hover:text-gray-400">トップ</Link>
           <span className="mx-3">·</span>
           <Link href="/terms" className="hover:text-gray-400">利用規約</Link>
+          <span className="mx-3">·</span>
+          <Link href="/contact" className="hover:text-gray-400">お問い合わせ</Link>
         </div>
       </div>
     </div>

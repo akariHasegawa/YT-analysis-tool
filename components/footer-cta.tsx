@@ -28,6 +28,8 @@ export function FooterCTA({ onGetStarted }: FooterCTAProps) {
         <Link href="/terms" className="transition-colors hover:text-gray-400">利用規約</Link>
         <span>·</span>
         <Link href="/faq" className="transition-colors hover:text-gray-400">よくある質問</Link>
+        <span>·</span>
+        <Link href="/contact" className="transition-colors hover:text-gray-400">お問い合わせ</Link>
       </div>
     </section>
   )
