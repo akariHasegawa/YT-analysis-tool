@@ -48,19 +48,9 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false
 
     void (async () => {
-      const { data: first } = await supabase.auth.getSession()
-      if (cancelled) return
-
-      if (!first.session) {
-        const { error } = await supabase.auth.signInAnonymously()
-        if (error) {
-          console.warn("[auth] Anonymous sign-in skipped:", error.message)
-        }
-      }
-
-      const { data: after } = await supabase.auth.getSession()
+      const { data } = await supabase.auth.getSession()
       if (!cancelled) {
-        setSession(after.session)
+        setSession(data.session)
         setIsLoading(false)
       }
     })()
