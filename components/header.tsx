@@ -24,7 +24,7 @@ export function Header({ onPricingClick, onGetStartedClick, onLoginClick }: Head
   const handleConnectExtension = () => {
     if (!session?.access_token) return
     window.dispatchEvent(new CustomEvent('aiai-connect', {
-      detail: { token: session.access_token }
+      detail: { token: session.access_token, refreshToken: session.refresh_token }
     }))
     setConnectStatus("success")
     setTimeout(() => setConnectStatus("idle"), 3000)

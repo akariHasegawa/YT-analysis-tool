@@ -5,38 +5,44 @@
 // --- 1. Receive token from web app ---
 window.addEventListener('aiai-connect', (e) => {
   const token = e.detail?.token
+  const refreshToken = e.detail?.refreshToken
   if (!token) return
 
-  chrome.storage.local.set({ aiai_token: token }, () => {
-    // Notify the page that connection succeeded
+  chrome.storage.local.set({
+    aiai_token: token,
+    aiai_session: { access_token: token, refresh_token: refreshToken ?? '' }
+  }, () => {
     window.dispatchEvent(new CustomEvent('aiai-connect-reply', {
       detail: { success: true }
     }))
   })
 })
 
-// --- 2. Forward pending extension data to the page ---
+// --- 2. Forward session + pending data to the page ---
+const TARGET = 'https://yt-analysis-tool-mu.vercel.app'
 let sent = false
 
-function sendPending() {
+function sendToPage() {
   if (sent) return
-  chrome.storage.local.get(['aiai_pending'], (result) => {
-    if (!result.aiai_pending) return
+  chrome.storage.local.get(['aiai_session', 'aiai_pending'], (result) => {
     if (sent) return
     sent = true
-    window.postMessage({
-      type: 'AIAI_EXTENSION_PENDING',
-      data: result.aiai_pending
-    }, 'https://yt-analysis-tool-mu.vercel.app')
-    chrome.storage.local.remove('aiai_pending')
+
+    // Restore session first so the page is authenticated before analysis runs
+    if (result.aiai_session?.access_token) {
+      window.postMessage({ type: 'AIAI_RESTORE_SESSION', data: result.aiai_session }, TARGET)
+    }
+
+    if (result.aiai_pending) {
+      window.postMessage({ type: 'AIAI_EXTENSION_PENDING', data: result.aiai_pending }, TARGET)
+      chrome.storage.local.remove('aiai_pending')
+    }
   })
 }
 
-// Try immediately after delays (fallback if AIAI_PAGE_READY is missed)
-setTimeout(sendPending, 800)
-setTimeout(sendPending, 2000)
+setTimeout(sendToPage, 800)
+setTimeout(sendToPage, 2500)
 
-// Also respond to AIAI_PAGE_READY signal from the page
 window.addEventListener('message', (e) => {
-  if (e.data?.type === 'AIAI_PAGE_READY') sendPending()
+  if (e.data?.type === 'AIAI_PAGE_READY') sendToPage()
 })

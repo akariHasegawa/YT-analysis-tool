@@ -102,13 +102,23 @@ export default function Home() {
       })
   }, [session, supabase])
 
-  // Receive pending analysis data from Chrome extension (via auth.js content script)
+  // Receive messages from Chrome extension (via auth.js content script)
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       if (
         e.origin !== 'https://yt-analysis-tool-mu.vercel.app' &&
         e.origin !== window.location.origin
       ) return
+
+      // Restore session from stored tokens (fixes new-tab auth issue)
+      if (e.data?.type === 'AIAI_RESTORE_SESSION') {
+        const { access_token, refresh_token } = e.data.data as { access_token: string; refresh_token: string }
+        if (supabase && access_token) {
+          supabase.auth.setSession({ access_token, refresh_token }).catch(console.warn)
+        }
+        return
+      }
+
       if (e.data?.type !== 'AIAI_EXTENSION_PENDING') return
 
       const d = e.data.data as {
@@ -119,15 +129,13 @@ export default function Home() {
       }
       if (!d?.url) return
 
-      // Store payload; actual screen switch happens after auth is confirmed loaded
       setPendingExtensionPayload(d)
     }
 
     window.addEventListener('message', handler)
-    // Signal to content script that the page is ready to receive extension data
     window.postMessage({ type: 'AIAI_PAGE_READY' }, window.location.origin)
     return () => window.removeEventListener('message', handler)
-  }, [])
+  }, [supabase])
 
   const beginStripeCheckout = useCallback(
     async (plan: PaidPlan) => {
