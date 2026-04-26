@@ -143,13 +143,9 @@ async function handleAnalyze() {
   })
 }
 
-function isReelsPage() {
-  return /\/(reel|reels|p)\/[A-Za-z0-9_-]+/.test(location.href)
-}
-
 function injectButton() {
   if (document.getElementById(BUTTON_ID)) return
-  if (!isReelsPage()) return
+  if (!document.body) return
   document.body.appendChild(createButton())
 }
 
