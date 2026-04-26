@@ -16,10 +16,14 @@ window.addEventListener('aiai-connect', (e) => {
 })
 
 // --- 2. Forward pending extension data to the page ---
-// Wait for page to signal it's ready before sending, to avoid race condition
+let sent = false
+
 function sendPending() {
+  if (sent) return
   chrome.storage.local.get(['aiai_pending'], (result) => {
     if (!result.aiai_pending) return
+    if (sent) return
+    sent = true
     window.postMessage({
       type: 'AIAI_EXTENSION_PENDING',
       data: result.aiai_pending
@@ -28,6 +32,11 @@ function sendPending() {
   })
 }
 
+// Try immediately after delays (fallback if AIAI_PAGE_READY is missed)
+setTimeout(sendPending, 800)
+setTimeout(sendPending, 2000)
+
+// Also respond to AIAI_PAGE_READY signal from the page
 window.addEventListener('message', (e) => {
   if (e.data?.type === 'AIAI_PAGE_READY') sendPending()
 })
