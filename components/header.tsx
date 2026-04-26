@@ -26,18 +26,8 @@ export function Header({ onPricingClick, onGetStartedClick, onLoginClick }: Head
     window.dispatchEvent(new CustomEvent('aiai-connect', {
       detail: { token: session.access_token }
     }))
-    // Listen for reply from content script
-    const onReply = () => {
-      setConnectStatus("success")
-      setTimeout(() => setConnectStatus("idle"), 3000)
-      window.removeEventListener('aiai-connect-reply', onReply)
-    }
-    window.addEventListener('aiai-connect-reply', onReply)
-    // Fallback: no extension installed
-    setTimeout(() => {
-      window.removeEventListener('aiai-connect-reply', onReply)
-      if (connectStatus !== "success") setConnectStatus("idle")
-    }, 2000)
+    setConnectStatus("success")
+    setTimeout(() => setConnectStatus("idle"), 3000)
   }
 
   return (
