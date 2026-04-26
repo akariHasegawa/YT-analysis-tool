@@ -163,6 +163,15 @@ export default function Home() {
   // Process extension payload once auth loading is complete
   useEffect(() => {
     if (authLoading || !pendingExtensionPayload) return
+
+    // If anonymous or not logged in, show login modal and wait
+    const isAnon = Boolean((session?.user as { is_anonymous?: boolean } | undefined)?.is_anonymous)
+    const authed = Boolean(session?.user) && !isAnon
+    if (!authed) {
+      setShowSignupModal(true)
+      return
+    }
+
     const d = pendingExtensionPayload
     setPendingExtensionPayload(null)
     setPendingExtensionData(d.extensionData)
@@ -185,7 +194,7 @@ export default function Home() {
     setMetadataError(undefined)
     setSelectedMode('buzz')
     setScreen('results')
-  }, [authLoading, pendingExtensionPayload])
+  }, [authLoading, pendingExtensionPayload, session])
 
   const handleGetStarted = useCallback(() => {
     setScreen("mode-selection")
