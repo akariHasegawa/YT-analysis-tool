@@ -59,7 +59,7 @@ function scrapeData() {
     '[data-e2e="browse-comment-count"]',
   ])
 
-  // Try to get captions from subtitle elements
+  // Captions from subtitle elements
   const captionEls = document.querySelectorAll(
     '[class*="DivCaptionContainer"] span, [class*="caption"] span, [data-e2e="video-caption"] span'
   )
@@ -67,6 +67,24 @@ function scrapeData() {
     .map(el => el.textContent?.trim())
     .filter(Boolean)
     .join(' ')
+
+  // Hashtags from title text and anchor tags
+  const hashtagAnchors = Array.from(document.querySelectorAll('a[href*="/tag/"]'))
+    .map(el => el.textContent?.trim())
+    .filter(Boolean)
+  const hashtagsFromTitle = (title.match(/#[\w\u3000-\u9fff]+/g) || [])
+  const hashtags = [...new Set([...hashtagAnchors, ...hashtagsFromTitle])].join(' ')
+
+  // BGM / music name
+  const bgm = getText([
+    '[data-e2e="browse-music"]',
+    'div[class*="music-info"] a',
+    'a[href*="/music/"]',
+    '[class*="MusicInfo"] span',
+  ]) || ''
+
+  // Thumbnail from og:image
+  const thumbnailUrl = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || ''
 
   return {
     url,
@@ -77,6 +95,9 @@ function scrapeData() {
       likes: parseCount(likesText),
       comments: parseCount(commentsText),
       captions,
+      hashtags,
+      bgm,
+      thumbnailUrl,
     },
   }
 }

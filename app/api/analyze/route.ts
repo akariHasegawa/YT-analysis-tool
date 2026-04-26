@@ -192,6 +192,9 @@ import { NextRequest, NextResponse } from "next/server"
         likes: z.number().nullable().optional(),
         comments: z.number().nullable().optional(),
         captions: z.string().optional().default(""),
+        hashtags: z.string().optional().default(""),
+        bgm: z.string().optional().default(""),
+        thumbnailUrl: z.string().optional().default(""),
       })
       .optional(),
   })
@@ -301,9 +304,12 @@ import { NextRequest, NextResponse } from "next/server"
         }\n`
       : ""
 
+    // For TikTok/Instagram: use extensionData.thumbnailUrl if no YouTube thumbnail
+    const effectiveThumbnailUrl = thumbnailUrl || extensionData?.thumbnailUrl || null
+
     let thumbForOpenAi: string | undefined
-    if (thumbnailUrl != null) {
-      const t = String(thumbnailUrl).trim()
+    if (effectiveThumbnailUrl != null) {
+      const t = String(effectiveThumbnailUrl).trim()
       if (t) {
         try {
           const u = new URL(t)
@@ -314,16 +320,29 @@ import { NextRequest, NextResponse } from "next/server"
       }
     }
 
-    const systemPrompt = buildUnifiedAnalysisSystemPrompt(mode, hasCompetitorUrl, Boolean(thumbForOpenAi))
+    const isVisualContent = (platform === "tiktok" || platform === "instagram") && !transcript
+    const bgm = extensionData?.bgm || ""
+    const hashtags = extensionData?.hashtags || ""
 
+    const systemPrompt = buildUnifiedAnalysisSystemPrompt(
+      mode, hasCompetitorUrl, Boolean(thumbForOpenAi), isVisualContent
+    )
+
+    const visualMetaBlock = isVisualContent
+      ? `\n--- ビジュアル系コンテンツ情報 ---\nBGM・使用音源: ${bgm || "不明"}\nハッシュタグ: ${hashtags || "なし"}\nプラットフォーム: ${getPlatformSheetLabel(url)}\n`
+      : ""
+
+    const hasTranscript = Boolean(transcript)
     const userContent = `動画の長さ(秒・参考): ${duration != null ? String(duration) : "不明"}
 動画URL: ${url}
 動画タイトル: ${title}
 チャンネル名: ${channelName}
-${transcript ? `\n--- 字幕（秒付き） ---\n${transcript.slice(0, 11000)}` : "（字幕取得できませんでした）"}
+${visualMetaBlock}${hasTranscript ? `\n--- 字幕（秒付き） ---\n${transcript.slice(0, 11000)}` : "（字幕・音声なし：ビジュアル系コンテンツとして分析）"}
 ${competitorBlock}
 【厳守】analysis.improvementIdeas の5件は以下のルールに従うこと：
-- 必ず字幕の具体的な発言・秒数を「〇〇秒の『△△』という発言の後に〜」の形式で引用すること
+${hasTranscript
+  ? "- 必ず字幕の具体的な発言・秒数を「〇〇秒の『△△』という発言の後に〜」の形式で引用すること"
+  : "- 字幕がないため、タイトル・BGM・ハッシュタグ・サムネイル・再生数/いいね数などのメタデータに基づいた具体的な改善案を書くこと"}
 - 「フックを強化する」「テンポを上げる」「CTAを明確にする」「視聴者参加型」などの汎用表現だけで終わらせることを禁止する
 - この動画にしか当てはまらない改善案を書くこと
 上記をもとに、システム指示のとおり analysis / structureTimeline / referenceInsights を含む1つのJSONのみを返してください。`

@@ -60,6 +60,24 @@ function scrapeData() {
   // Captions from accessible description
   const metaDesc = document.querySelector('meta[name="description"]')?.getAttribute('content') || ''
 
+  // Hashtags from caption text and anchor tags
+  const hashtagAnchors = Array.from(document.querySelectorAll('a[href*="/explore/tags/"]'))
+    .map(el => el.textContent?.trim())
+    .filter(Boolean)
+  const hashtagsFromCaption = (caption.match(/#[\w\u3000-\u9fff]+/g) || [])
+  const hashtags = [...new Set([...hashtagAnchors, ...hashtagsFromCaption])].join(' ')
+
+  // BGM / audio name
+  const bgm = getText([
+    'span[class*="audio-title"]',
+    'div[class*="audio"] a',
+    'a[href*="/reels/audio/"]',
+    'span._aacl._aaco._aacu',
+  ]) || ''
+
+  // Thumbnail from og:image
+  const thumbnailUrl = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || ''
+
   return {
     url,
     title: caption,
@@ -69,6 +87,9 @@ function scrapeData() {
       likes: parseCount(likesText),
       comments: null,
       captions: metaDesc || caption,
+      hashtags,
+      bgm,
+      thumbnailUrl,
     },
   }
 }

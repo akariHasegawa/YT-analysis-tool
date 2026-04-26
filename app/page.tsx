@@ -63,12 +63,15 @@ export default function Home() {
     likes: number | null
     comments: number | null
     captions: string
+    hashtags?: string
+    bgm?: string
+    thumbnailUrl?: string
   } | null>(null)
   const [pendingExtensionPayload, setPendingExtensionPayload] = useState<{
     url: string
     title: string
     channelName: string
-    extensionData: { views: number | null; likes: number | null; comments: number | null; captions: string }
+    extensionData: { views: number | null; likes: number | null; comments: number | null; captions: string; hashtags?: string; bgm?: string; thumbnailUrl?: string }
   } | null>(null)
 
   const maxAnalyses = userPlan === "business" ? 100 : userPlan === "pro" ? 30 : 1
