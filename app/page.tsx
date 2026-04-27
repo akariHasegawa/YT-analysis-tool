@@ -463,6 +463,7 @@ export default function Home() {
         remainingAnalyses={remainingAnalyses}
         maxAnalyses={maxAnalyses}
         isFirstFreeAnalysis={!isAuthenticated && !hasUsedFreeAnalysis}
+        videoUrl={analyzedUrl}
       />
       <SignupModal
         isOpen={showSignupModal}

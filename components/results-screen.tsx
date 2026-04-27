@@ -55,6 +55,7 @@ interface ResultsScreenProps {
   /** growth かつ入力で競合URLを付けたとき true */
   hadCompetitorUrl?: boolean
   analysisMode?: AnalysisMode
+  videoUrl?: string
 }
 
 type AnalysisCardKey = "hook" | "emotion" | "cta" | "structure" | "retention"
@@ -118,9 +119,11 @@ export function ResultsScreen({
   hadCompetitorUrl = false,
   analysisMode = "buzz",
   isFirstFreeAnalysis = false,
+  videoUrl = "",
 }: ResultsScreenProps) {
   const { t, language } = useLanguage()
   const locale = language === "ja" ? "ja-JP" : "en-US"
+  const isShortFormPlatform = /tiktok\.com|instagram\.com/.test(videoUrl)
   
   // Upgrade modal state
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false)
@@ -323,9 +326,15 @@ export function ResultsScreen({
                   )}
                 </div>
                 <div className="flex flex-wrap gap-x-6 gap-y-3">
-                  <Stat icon={Eye} label={t("results.views")} value={viewsDisplay} />
-                  <Stat icon={Clock} label={t("results.duration")} value={durationDisplay} />
-                  <Stat icon={TrendingUp} label={t("results.trendScore")} value={trendDisplay} />
+                  {!isShortFormPlatform || videoInfo?.views != null ? (
+                    <Stat icon={Eye} label={t("results.views")} value={viewsDisplay} />
+                  ) : null}
+                  {!isShortFormPlatform ? (
+                    <Stat icon={Clock} label={t("results.duration")} value={durationDisplay} />
+                  ) : null}
+                  {!isShortFormPlatform ? (
+                    <Stat icon={TrendingUp} label={t("results.trendScore")} value={trendDisplay} />
+                  ) : null}
                 </div>
               </div>
             </div>
