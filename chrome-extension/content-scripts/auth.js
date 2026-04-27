@@ -62,6 +62,7 @@ window.addEventListener('message', (e) => {
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === 'AIAI_CHECK_PENDING') {
     sent = false
+    window.postMessage({ type: 'AIAI_LOADING_START' }, TARGET)
     sendToPage()
   }
 })

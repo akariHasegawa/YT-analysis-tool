@@ -123,6 +123,11 @@ export default function Home() {
         e.origin !== window.location.origin
       ) return
 
+      if (e.data?.type === 'AIAI_LOADING_START') {
+        setAnalysisLoading(true)
+        return
+      }
+
       // Restore session from stored tokens (fixes new-tab auth issue)
       if (e.data?.type === 'AIAI_RESTORE_SESSION') {
         const { access_token, refresh_token } = e.data.data as { access_token: string; refresh_token: string }
