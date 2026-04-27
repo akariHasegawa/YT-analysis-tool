@@ -53,6 +53,9 @@ export default function Home() {
   const [pendingCheckoutPlan, setPendingCheckoutPlan] = useState<PaidPlan | null>(null)
   const [checkoutLoadingPlan, setCheckoutLoadingPlan] = useState<PaidPlan | null>(null)
 
+  // Forces analysis useEffect to re-run even when URL/screen don't change
+  const [analysisKey, setAnalysisKey] = useState(0)
+
   // Multi-video analysis state
   const [multiAnalysis, setMultiAnalysis] = useState<MultiVideoAnalysis | null>(null)
   const [multiAnalyzedUrls, setMultiAnalyzedUrls] = useState<string[]>([])
@@ -210,7 +213,12 @@ export default function Home() {
       likeCount: d.extensionData?.likes ?? null,
     })
     setMetadataError(undefined)
+    setAnalysis(null)
+    setAnalysisError(undefined)
+    setAnalysisLoading(false)
+    setReferenceInsights(null)
     setSelectedMode('buzz')
+    setAnalysisKey(k => k + 1)
     setScreen('results')
   }, [authLoading, pendingExtensionPayload, session])
 
@@ -395,7 +403,7 @@ export default function Home() {
     })()
 
     return () => { clearTimeout(timeoutId); ac.abort() }
-  }, [screen, analyzedUrl, videoInfo, metadataError, competitorUrl, selectedMode])
+  }, [screen, analyzedUrl, videoInfo, metadataError, competitorUrl, selectedMode, analysisKey])
 
   if (screen === "landing") {
     return (
