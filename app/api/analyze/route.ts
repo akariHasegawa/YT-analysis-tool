@@ -320,7 +320,7 @@ import { NextRequest, NextResponse } from "next/server"
       }
     }
 
-    const isVisualContent = (platform === "tiktok" || platform === "instagram") && !transcript
+    const isVisualContent = platform === "tiktok" || platform === "instagram"
     const bgm = extensionData?.bgm || ""
     const hashtags = extensionData?.hashtags || ""
 
@@ -332,12 +332,12 @@ import { NextRequest, NextResponse } from "next/server"
       ? `\n--- ビジュアル系コンテンツ情報 ---\nBGM・使用音源: ${bgm || "不明"}\nハッシュタグ: ${hashtags || "なし"}\nプラットフォーム: ${getPlatformSheetLabel(url)}\n`
       : ""
 
-    const hasTranscript = Boolean(transcript)
+    const hasTranscript = Boolean(transcript) && !isVisualContent
     const userContent = `動画の長さ(秒・参考): ${duration != null ? String(duration) : "不明"}
 動画URL: ${url}
 動画タイトル: ${title}
 チャンネル名: ${channelName}
-${visualMetaBlock}${hasTranscript ? `\n--- 字幕（秒付き） ---\n${transcript.slice(0, 11000)}` : "（字幕・音声なし：ビジュアル系コンテンツとして分析）"}
+${visualMetaBlock}${hasTranscript ? `\n--- 字幕（秒付き） ---\n${transcript.slice(0, 11000)}` : isVisualContent ? `${transcript ? `\n--- キャプション・説明文 ---\n${transcript.slice(0, 3000)}\n` : ""}（字幕・音声なし：ビジュアル系コンテンツとして分析）` : "（字幕・音声なし：ビジュアル系コンテンツとして分析）"}
 ${competitorBlock}
 【厳守】analysis.improvementIdeas の5件は以下のルールに従うこと：
 ${hasTranscript

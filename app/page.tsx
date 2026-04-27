@@ -324,8 +324,11 @@ export default function Home() {
     if (metadataError) return
 
     const ac = new AbortController()
+    const timeoutId = setTimeout(() => ac.abort(), 90000)
     setAnalysisLoading(true)
     setAnalysisError(undefined)
+
+    console.log('[analyze] starting fetch', { screen, analyzedUrl, hasVideoInfo: !!videoInfo, hasSession: !!session?.access_token })
 
     ;(async () => {
       try {
@@ -333,6 +336,7 @@ export default function Home() {
         if (session?.access_token) {
           analyzeHeaders["Authorization"] = `Bearer ${session.access_token}`
         }
+        console.log('[analyze] calling /api/analyze')
         const res = await fetch("/api/analyze", {
           method: "POST",
           headers: analyzeHeaders,
@@ -355,6 +359,7 @@ export default function Home() {
           referenceInsights?: ReferenceInsightsPayload
           error?: string
         }
+        console.log('[analyze] response', res.status, res.ok)
         if (ac.signal.aborted) return
         if (!res.ok) {
           setAnalysis(null)
@@ -379,15 +384,17 @@ export default function Home() {
         }
       } catch (e) {
         if (ac.signal.aborted) return
+        console.error('[analyze] error', e)
         const message = e instanceof Error ? e.message : tRef.current("processing.error.analyzeFailed")
         setAnalysis(null)
         setAnalysisError(message)
       } finally {
+        clearTimeout(timeoutId)
         if (!ac.signal.aborted) setAnalysisLoading(false)
       }
     })()
 
-    return () => ac.abort()
+    return () => { clearTimeout(timeoutId); ac.abort() }
   }, [screen, analyzedUrl, videoInfo, metadataError, competitorUrl, selectedMode])
 
   if (screen === "landing") {
