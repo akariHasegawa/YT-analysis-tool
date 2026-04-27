@@ -27,22 +27,36 @@ function parseCount(text) {
 function scrapeData() {
   const url = window.location.href
 
-  // Author username from URL or DOM
-  const urlMatch = url.match(/instagram\.com\/([^/?]+)\//)
-  const channelName = getText([
-    'header a[role="link"]',
-    'a[href*="/"] span.notranslate',
-    'span._aacl._aaco._aacw._aacx._aad7._aade',
-  ]) || urlMatch?.[1] || ''
+  // meta description format: "username on Instagram: 'caption'" or "X views - username on Instagram"
+  const metaDesc = document.querySelector('meta[name="description"]')?.getAttribute('content') || ''
+  const ogDesc = document.querySelector('meta[property="og:description"]')?.getAttribute('content') || ''
+  const ogTitle = document.querySelector('meta[property="og:title"]')?.getAttribute('content') || ''
 
-  // Caption / title
-  const caption = getText([
+  // Extract username from meta description "username on Instagram" pattern
+  const metaUserMatch = (metaDesc || ogDesc).match(/^(.+?)\s+on Instagram/i)
+  const metaUsername = metaUserMatch?.[1]?.trim() || ''
+
+  // Author username: prefer meta-extracted, fall back to DOM, then URL (skip "reels"/"p" path segments)
+  const urlUserMatch = url.match(/instagram\.com\/(?!reels\/|p\/|stories\/)([^/?]+)\//)
+  const channelName = metaUsername ||
+    getText([
+      'header a[role="link"]',
+      'a[href*="/"] span.notranslate',
+      'span._aacl._aaco._aacw._aacx._aad7._aade',
+    ]) || urlUserMatch?.[1] || ''
+
+  // Extract caption from meta description (after "username on Instagram: 'caption'")
+  const metaCaptionMatch = (metaDesc || ogDesc).match(/on Instagram[:\s]+['"]([\s\S]*?)['"]\s*$/i)
+  const metaCaption = metaCaptionMatch?.[1]?.trim() || ''
+
+  // Caption / title from DOM or meta
+  const domCaption = getText([
     'h1._aacl',
     'span._aacl._aaco._aacu._aacx._aad7._aade',
     'div._a9zs span',
     'li[role="menuitem"] span',
-    'meta[property="og:description"]',
-  ]) || document.title
+  ])
+  const caption = domCaption || metaCaption || ogTitle || metaDesc || document.title
 
   // Likes
   const likesText = getText([
@@ -56,9 +70,6 @@ function scrapeData() {
     'span[class*="videoPlaybackPosition"]',
     'span[class*="views"]',
   ])
-
-  // Captions from accessible description
-  const metaDesc = document.querySelector('meta[name="description"]')?.getAttribute('content') || ''
 
   // Hashtags from caption text and anchor tags
   const hashtagAnchors = Array.from(document.querySelectorAll('a[href*="/explore/tags/"]'))
@@ -86,7 +97,7 @@ function scrapeData() {
       views: parseCount(viewsText),
       likes: parseCount(likesText),
       comments: null,
-      captions: metaDesc || caption,
+      captions: metaCaption || domCaption || metaDesc,
       hashtags,
       bgm,
       thumbnailUrl,
