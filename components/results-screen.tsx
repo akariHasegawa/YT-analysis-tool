@@ -21,6 +21,8 @@ import {
   Copy,
   Check,
   Scale,
+  Music2,
+  Hash,
   type LucideIcon,
 } from "lucide-react"
 import { LockedFeature, PlanBadge } from "@/components/locked-feature"
@@ -56,6 +58,8 @@ interface ResultsScreenProps {
   hadCompetitorUrl?: boolean
   analysisMode?: AnalysisMode
   videoUrl?: string
+  hashtags?: string
+  bgm?: string
 }
 
 type AnalysisCardKey = "hook" | "emotion" | "cta" | "structure" | "retention"
@@ -120,10 +124,13 @@ export function ResultsScreen({
   analysisMode = "buzz",
   isFirstFreeAnalysis = false,
   videoUrl = "",
+  hashtags = "",
+  bgm = "",
 }: ResultsScreenProps) {
   const { t, language } = useLanguage()
   const locale = language === "ja" ? "ja-JP" : "en-US"
   const isShortFormPlatform = /tiktok\.com|instagram\.com/.test(videoUrl)
+  const hashtagList = hashtags ? hashtags.split(/\s+/).filter(Boolean).slice(0, 8) : []
   
   // Upgrade modal state
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false)
@@ -325,17 +332,37 @@ export function ResultsScreen({
                     <p className="mt-2 text-sm text-muted-foreground">{channelName}</p>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-x-6 gap-y-3">
-                  {!isShortFormPlatform || videoInfo?.views != null ? (
+                {isShortFormPlatform ? (
+                  <div className="flex flex-col gap-2">
+                    {bgm && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Music2 className="h-3.5 w-3.5 shrink-0 text-[oklch(0.72_0.12_260)]" />
+                        <span className="truncate text-foreground/80">{bgm}</span>
+                      </div>
+                    )}
+                    {hashtagList.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {hashtagList.map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded-full bg-[oklch(0.25_0.08_280)] px-2.5 py-0.5 text-xs text-[oklch(0.78_0.12_260)]"
+                          >
+                            {tag.startsWith('#') ? tag : `#${tag}`}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {videoInfo?.views != null && (
+                      <Stat icon={Eye} label={t("results.views")} value={viewsDisplay} />
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-x-6 gap-y-3">
                     <Stat icon={Eye} label={t("results.views")} value={viewsDisplay} />
-                  ) : null}
-                  {!isShortFormPlatform ? (
                     <Stat icon={Clock} label={t("results.duration")} value={durationDisplay} />
-                  ) : null}
-                  {!isShortFormPlatform ? (
                     <Stat icon={TrendingUp} label={t("results.trendScore")} value={trendDisplay} />
-                  ) : null}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

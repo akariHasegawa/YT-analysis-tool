@@ -464,6 +464,8 @@ export default function Home() {
         maxAnalyses={maxAnalyses}
         isFirstFreeAnalysis={!isAuthenticated && !hasUsedFreeAnalysis}
         videoUrl={analyzedUrl}
+        hashtags={pendingExtensionData?.hashtags ?? ""}
+        bgm={pendingExtensionData?.bgm ?? ""}
       />
       <SignupModal
         isOpen={showSignupModal}
