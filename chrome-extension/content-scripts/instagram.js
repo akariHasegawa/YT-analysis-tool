@@ -45,8 +45,9 @@ function scrapeData() {
       'span._aacl._aaco._aacw._aacx._aad7._aade',
     ]) || urlUserMatch?.[1] || ''
 
-  // Extract caption from meta description (after "username on Instagram: 'caption'")
-  const metaCaptionMatch = (metaDesc || ogDesc).match(/on Instagram[:\s]+['"]([\s\S]*?)['"]\s*$/i)
+  // Extract caption from meta description (after "username on Instagram: 'caption'" or just "on Instagram: caption")
+  const descText = metaDesc || ogDesc
+  const metaCaptionMatch = descText.match(/on Instagram[:\s]+[\u201c\u2018'""]?([\s\S]+?)[\u201d\u2019'"""]?\s*$/i)
   const metaCaption = metaCaptionMatch?.[1]?.trim() || ''
 
   // Caption / title from DOM or meta

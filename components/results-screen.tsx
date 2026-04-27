@@ -250,8 +250,12 @@ export function ResultsScreen({
     })
   }
 
-  const title = (videoInfo?.title ?? "").trim() || t("results.titleUnknown")
   const channelName = (videoInfo?.channelName ?? "").trim() || t("results.channelUnknown")
+  const rawTitle = (videoInfo?.title ?? "").trim()
+  const isGenericTitle = /^(Instagram|TikTok)$/i.test(rawTitle)
+  const title = isGenericTitle && isShortFormPlatform && channelName
+    ? `@${channelName}`
+    : rawTitle || t("results.titleUnknown")
   const thumbnailUrl = videoInfo?.thumbnailUrl ?? ""
   const authorUrl = videoInfo?.authorUrl
 
