@@ -59,9 +59,12 @@ function buildInternalReportHtml(req: ReportRequest): string {
 
   return `<!DOCTYPE html>
 <html lang="ja">
-<head><meta charset="UTF-8"><style>
+<head><meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0f1117; color: #e2e8f0; font-family: "Helvetica Neue", Arial, sans-serif; padding: 32px; }
+  body { background: #0f1117; color: #e2e8f0; font-family: "Noto Sans JP", "Hiragino Sans", "Meiryo", sans-serif; padding: 32px; }
   @page { size: A4; margin: 0; }
 </style></head>
 <body>
