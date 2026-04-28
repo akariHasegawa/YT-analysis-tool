@@ -15,6 +15,7 @@ interface ReportRequest {
   reportType: ReportType
   clientName?: string
   clientCompany?: string
+  accountMemo?: string
 }
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -24,7 +25,7 @@ function esc(s: string | null | undefined): string {
 }
 
 function buildInternalReportHtml(req: ReportRequest): string {
-  const { analysis, videoInfo } = req
+  const { analysis, videoInfo, accountMemo } = req
   const today = new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })
   const score = analysis.retentionScore ?? 0
   const reasons = analysis.retentionReasons ?? []
@@ -89,8 +90,8 @@ function buildInternalReportHtml(req: ReportRequest): string {
         <p style="font-size:14px;font-weight:600;color:#e2e8f0">${esc(videoInfo.title)}</p>
       </div>
       <div>
-        <p style="font-size:10px;color:#64748b;margin-bottom:4px">チャンネル</p>
-        <p style="font-size:14px;font-weight:600;color:#e2e8f0">${esc(videoInfo.channelName)}</p>
+        <p style="font-size:10px;color:#64748b;margin-bottom:4px">チャンネル / アカウント</p>
+        <p style="font-size:14px;font-weight:600;color:#e2e8f0">${esc(accountMemo || videoInfo.channelName)}</p>
       </div>
       ${videoInfo.views ? `<div><p style="font-size:10px;color:#64748b;margin-bottom:4px">再生数</p><p style="font-size:14px;font-weight:600;color:#e2e8f0">${videoInfo.views.toLocaleString("ja-JP")}</p></div>` : ""}
       ${videoInfo.publishedAt ? `<div><p style="font-size:10px;color:#64748b;margin-bottom:4px">公開日</p><p style="font-size:14px;font-weight:600;color:#e2e8f0">${esc(videoInfo.publishedAt)}</p></div>` : ""}
@@ -329,7 +330,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
 
-  const { analysis, videoInfo, reportType, clientName, clientCompany } = body
+  const { analysis, videoInfo, reportType, clientName, clientCompany, accountMemo } = body
   if (!analysis || !videoInfo || !reportType) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
   }
@@ -338,7 +339,7 @@ export async function POST(req: NextRequest) {
     let html: string
     if (reportType === "internal") {
       // 内部用はテンプレートで直接生成（Claude不要）
-      html = buildInternalReportHtml({ analysis, videoInfo, reportType, clientName, clientCompany })
+      html = buildInternalReportHtml({ analysis, videoInfo, reportType, clientName, clientCompany, accountMemo })
     } else {
       // クライアント用・台本はClaudeで生成
       const message = await client.messages.create({

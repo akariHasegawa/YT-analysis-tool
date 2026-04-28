@@ -10,6 +10,7 @@ import type { ReportType } from "@/app/api/generate-report/route"
 interface Props {
   analysis: ShortsAnalysis
   videoInfo: VideoInfo
+  channelHint?: string
 }
 
 const REPORT_TYPES: { type: ReportType; label: string; description: string }[] = [
@@ -18,12 +19,13 @@ const REPORT_TYPES: { type: ReportType; label: string; description: string }[] =
   { type: "script", label: "プレゼン台本", description: "クライアントへの説明用" },
 ]
 
-export function ReportDownload({ analysis, videoInfo }: Props) {
+export function ReportDownload({ analysis, videoInfo, channelHint = "" }: Props) {
   const { session } = useSupabaseAuth()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState<ReportType | null>(null)
   const [clientName, setClientName] = useState("")
   const [clientCompany, setClientCompany] = useState("")
+  const [accountMemo, setAccountMemo] = useState(channelHint)
 
   const download = async (reportType: ReportType) => {
     if (!session?.access_token) return
@@ -35,7 +37,7 @@ export function ReportDownload({ analysis, videoInfo }: Props) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ analysis, videoInfo, reportType, clientName, clientCompany }),
+        body: JSON.stringify({ analysis, videoInfo, reportType, clientName, clientCompany, accountMemo }),
       })
 
       if (!res.ok) {
@@ -84,6 +86,18 @@ export function ReportDownload({ analysis, videoInfo }: Props) {
 
       {open && (
         <div className="border-t border-[oklch(0.5_0.1_270_/_0.2)] px-6 pb-6 pt-4 space-y-4">
+          {/* アカウントメモ */}
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">アカウント名・メモ（全レポートに記載）</label>
+            <input
+              type="text"
+              value={accountMemo}
+              onChange={(e) => setAccountMemo(e.target.value)}
+              placeholder="@username や「クライアントAのTikTok」など"
+              className="w-full rounded-lg border border-[oklch(0.5_0.1_270_/_0.3)] bg-[oklch(0.12_0.04_280_/_0.5)] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[oklch(0.6_0.14_265_/_0.5)]"
+            />
+          </div>
+
           {/* クライアント情報入力 */}
           <div className="grid grid-cols-2 gap-3">
             <div>
