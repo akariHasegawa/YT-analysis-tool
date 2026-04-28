@@ -5,7 +5,7 @@ import type { ShortsAnalysis } from "@/lib/shorts-analysis"
 import type { VideoInfo } from "@/lib/video-info"
 
 export const runtime = "nodejs"
-export const maxDuration = 60
+export const maxDuration = 300
 
 export type ReportType = "internal" | "client" | "script"
 
