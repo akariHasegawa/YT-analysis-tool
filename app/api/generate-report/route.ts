@@ -54,15 +54,17 @@ function buildPrompt(req: ReportRequest): string {
 ## 動画情報
 ${videoMeta}
 
-## 分析データ
+## 分析データ（必ずこのデータをそのままHTMLに埋め込むこと。プレースホルダー禁止）
 ${analysisJson}
 
 ## 要件
 - 日本語で記述
+- 上記の分析データの値をそのままHTMLに埋め込む（空のボックスを作らない）
 - 全データを詳細に記載（改善アイデア・次の動画アイデアも全て）
 - 視聴維持率スコアをグラフ的に表現（CSSで）
 - ダークテーマ（背景 #0f1117、テキスト #e2e8f0）
 - 完全なHTMLを返す（<!DOCTYPE html>から</html>まで）
+- マークダウンのコードブロック（\`\`\`html）は使わず、HTMLを直接返す
 - インラインCSSのみ使用（外部CSSなし）
 - 日付: ${today}
 - レイアウト：A4横向きに最適化
@@ -211,10 +213,12 @@ export async function POST(req: NextRequest) {
       ],
     })
 
-    const html = message.content
+    let html = message.content
       .filter((b) => b.type === "text")
       .map((b) => (b as { type: "text"; text: string }).text)
       .join("")
+    // Strip markdown code block wrapper if Claude returns ```html ... ```
+    html = html.replace(/^```html\s*/i, "").replace(/\s*```\s*$/, "")
 
     // HTMLをPDFに変換
     const pdfBuffer = await htmlToPdf(html)
