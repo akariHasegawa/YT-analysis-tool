@@ -152,14 +152,9 @@ async function handleAnalyze() {
   }, 2000)
 }
 
-function isVideoPage() {
-  return /tiktok\.com\/@[^/]+\/video\/\d+/.test(location.href)
-    || /tiktok\.com\/t\//.test(location.href)
-}
-
 function injectButton() {
   if (document.getElementById(BUTTON_ID)) return
-  if (!isVideoPage()) return
+  if (!document.body) return
   document.body.appendChild(createButton())
 }
 
@@ -167,20 +162,23 @@ function removeButton() {
   document.getElementById(BUTTON_ID)?.remove()
 }
 
-// --- SPA navigation detection ---
+// --- SPA navigation detection (same as instagram.js) ---
 
-let lastUrl = location.href
-
-function onUrlChange() {
-  if (location.href === lastUrl) return
-  lastUrl = location.href
+function onNavigate() {
   removeButton()
-  setTimeout(injectButton, 1500) // wait for DOM to settle
+  setTimeout(injectButton, 1000)
 }
 
-// MutationObserver for SPA navigation
-const observer = new MutationObserver(onUrlChange)
-observer.observe(document.body, { childList: true, subtree: true })
+const _push = history.pushState.bind(history)
+history.pushState = function (...args) {
+  _push(...args)
+  onNavigate()
+}
+const _replace = history.replaceState.bind(history)
+history.replaceState = function (...args) {
+  _replace(...args)
+  onNavigate()
+}
+window.addEventListener('popstate', onNavigate)
 
-// Initial injection
 setTimeout(injectButton, 1500)
