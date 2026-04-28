@@ -357,6 +357,12 @@ export async function POST(req: NextRequest) {
         .map((b) => (b as { type: "text"; text: string }).text)
         .join("")
       html = html.replace(/^```html\s*/i, "").replace(/\s*```\s*$/, "")
+      // Inject Japanese font if not already present
+      if (!html.includes("fonts.googleapis.com")) {
+        const fontTag = `<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700;800&display=swap" rel="stylesheet">`
+        html = html.replace(/<head>/i, `<head>${fontTag}`)
+        html = html.replace(/font-family:[^;"']*/g, 'font-family: "Noto Sans JP", sans-serif')
+      }
     }
 
     // HTMLをPDFに変換
