@@ -335,6 +335,17 @@ export function ResultsScreen({
                   ) : (
                     <p className="mt-2 text-sm text-muted-foreground">{channelName}</p>
                   )}
+                  {videoUrl && (
+                    <a
+                      href={videoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1.5 block max-w-full truncate text-xs text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+                      title={videoUrl}
+                    >
+                      {videoUrl}
+                    </a>
+                  )}
                 </div>
                 {isShortFormPlatform ? (
                   <div className="flex flex-col gap-2">
