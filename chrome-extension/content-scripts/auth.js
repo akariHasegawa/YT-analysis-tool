@@ -1,10 +1,9 @@
 // Runs on https://yt-analysis-tool-mu.vercel.app/*
-// 1. Auto-save session whenever user logs in (no need to click "連携" button)
-// 2. Restore session + forward pending analysis data in new tabs
+// Restores session and forwards pending extension data to the page
 
 const TARGET = 'https://yt-analysis-tool-mu.vercel.app'
 
-// --- 1. Auto-save session from page ---
+// Auto-save session when user logs in
 window.addEventListener('aiai-session-update', (e) => {
   const { access_token, refresh_token } = e.detail ?? {}
   if (!access_token) return
@@ -27,42 +26,42 @@ window.addEventListener('aiai-connect', (e) => {
   })
 })
 
-// --- 2. Restore session + forward pending data ---
-let sent = false
+// Check storage and forward to page
+let processing = false
+function checkAndForward() {
+  if (processing) return
+  processing = true
 
-function sendToPage() {
-  if (sent) return
   chrome.storage.local.get(['aiai_session', 'aiai_pending'], (result) => {
-    if (sent) return
-    sent = true
+    processing = false
 
-    // Send RESTORE_SESSION first
     if (result.aiai_session?.access_token) {
       window.postMessage({ type: 'AIAI_RESTORE_SESSION', data: result.aiai_session }, TARGET)
     }
 
-    // Send EXTENSION_PENDING after delay so setSession can complete
     if (result.aiai_pending) {
       const pending = result.aiai_pending
       chrome.storage.local.remove('aiai_pending')
+      window.postMessage({ type: 'AIAI_LOADING_START' }, TARGET)
+      // Delay to let setSession complete before sending data
       setTimeout(() => {
         window.postMessage({ type: 'AIAI_EXTENSION_PENDING', data: pending }, TARGET)
-      }, 1500)
+      }, 800)
     }
   })
 }
 
-setTimeout(sendToPage, 600)
-setTimeout(() => { sent = false; sendToPage() }, 2500)
+// On page load
+setTimeout(checkAndForward, 600)
 
-window.addEventListener('message', (e) => {
-  if (e.data?.type === 'AIAI_PAGE_READY') sendToPage()
+// When tab is focused (background.js focuses existing tab)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    setTimeout(checkAndForward, 300)
+  }
 })
 
-chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.type === 'AIAI_CHECK_PENDING') {
-    sent = false
-    window.postMessage({ type: 'AIAI_LOADING_START' }, TARGET)
-    sendToPage()
-  }
+// Page signals it's ready
+window.addEventListener('message', (e) => {
+  if (e.data?.type === 'AIAI_PAGE_READY') checkAndForward()
 })
