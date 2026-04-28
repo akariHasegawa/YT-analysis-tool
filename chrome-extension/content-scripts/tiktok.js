@@ -139,9 +139,12 @@ async function handleAnalyze() {
   btn.style.opacity = '0.7'
   btn.style.pointerEvents = 'none'
 
-  const data = scrapeData()
-
-  chrome.runtime.sendMessage({ type: 'OPEN_AIAI', data })
+  try {
+    const data = scrapeData()
+    chrome.runtime.sendMessage({ type: 'OPEN_AIAI', data })
+  } catch (e) {
+    console.error('[AIAI] scrapeData error', e)
+  }
   setTimeout(() => {
     btn.textContent = '分析する'
     btn.style.opacity = '1'
