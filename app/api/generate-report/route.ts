@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import Anthropic from "@anthropic-ai/sdk"
-import { createSupabaseAnon } from "@/lib/supabase"
+import { createSupabaseAdmin, createSupabaseAnon } from "@/lib/supabase"
 import type { ShortsAnalysis } from "@/lib/shorts-analysis"
 import type { VideoInfo } from "@/lib/video-info"
 
@@ -175,7 +175,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Businessプランチェック
-  const { data: userData } = await supabase
+  const admin = createSupabaseAdmin()
+  const { data: userData } = await admin
     .from("users")
     .select("plan")
     .eq("id", authData.user.id)
