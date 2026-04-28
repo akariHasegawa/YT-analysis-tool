@@ -24,80 +24,85 @@ function parseCount(text) {
   return isNaN(n) ? null : n
 }
 
-function scrapeData() {
-  const url = window.location.href
+function getFrom(el, selectors) {
+  for (const sel of selectors) {
+    const found = el ? el.querySelector(sel) : document.querySelector(sel)
+    if (found?.textContent?.trim()) return found.textContent.trim()
+  }
+  return null
+}
 
-  const title = getText([
+function scrapeData() {
+  // Find currently playing video and its container
+  const videos = Array.from(document.querySelectorAll('video'))
+  const playingVideo = videos.find(v => !v.paused && v.readyState > 0) || videos[0]
+  const container = playingVideo?.closest('[data-e2e="recommend-list-item-container"], [class*="DivItemContainer"], article, section') || null
+
+  // Get video URL from container link, fallback to window.location
+  const videoLink = container?.querySelector('a[href*="/video/"]')
+    || document.querySelector('a[href*="/video/"]')
+  const url = videoLink
+    ? new URL(videoLink.getAttribute('href'), location.origin).href
+    : window.location.href
+
+  // Scrape from container first, then page fallback
+  const title = getFrom(container, [
     '[data-e2e="video-desc"]',
     '[data-e2e="browse-video-desc"]',
     'h1[data-e2e="video-title"]',
-    '.video-meta-title',
+  ]) || getFrom(null, [
+    '[data-e2e="video-desc"]',
+    '[data-e2e="browse-video-desc"]',
   ]) || document.title
 
-  const channelName = getText([
+  const channelName = getFrom(container, [
     '[data-e2e="video-author-uniqueid"]',
     '[data-e2e="browse-video-author-uniqueid"]',
-    'a[data-e2e="video-author-avatar"] + div span',
-    'h3[data-e2e="user-title"]',
+  ]) || getFrom(null, [
+    '[data-e2e="video-author-uniqueid"]',
+    '[data-e2e="browse-video-author-uniqueid"]',
   ]) || ''
 
-  const viewsText = getText([
-    'strong[data-e2e="video-views"]',
-    '[data-e2e="video-views"]',
-    '[data-e2e="browse-video-views"]',
-  ])
-  const likesText = getText([
+  const likesText = getFrom(container, [
     'strong[data-e2e="like-count"]',
     '[data-e2e="like-count"]',
     'strong[data-e2e="browse-like-count"]',
-    '[data-e2e="browse-like-count"]',
   ])
-  const commentsText = getText([
+  const commentsText = getFrom(container, [
     'strong[data-e2e="comment-count"]',
     '[data-e2e="comment-count"]',
     'strong[data-e2e="browse-comment-count"]',
-    '[data-e2e="browse-comment-count"]',
   ])
 
-  // Captions from subtitle elements
-  const captionEls = document.querySelectorAll(
-    '[class*="DivCaptionContainer"] span, [class*="caption"] span, [data-e2e="video-caption"] span'
-  )
-  const captions = Array.from(captionEls)
-    .map(el => el.textContent?.trim())
-    .filter(Boolean)
-    .join(' ')
-
-  // Hashtags from title text and anchor tags
-  const hashtagAnchors = Array.from(document.querySelectorAll('a[href*="/tag/"]'))
-    .map(el => el.textContent?.trim())
-    .filter(Boolean)
+  // Hashtags from container only (prevents bleeding from adjacent videos)
+  const hashtagAnchors = Array.from((container || document).querySelectorAll('a[href*="/tag/"]'))
+    .map(el => el.textContent?.trim()).filter(Boolean)
   const hashtagsFromTitle = (title.match(/#[\w\u3000-\u9fff]+/g) || [])
   const hashtags = [...new Set([...hashtagAnchors, ...hashtagsFromTitle])].join(' ')
 
-  // BGM / music name
-  const bgm = getText([
+  const bgm = getFrom(container, [
     '[data-e2e="browse-music"]',
-    'div[class*="music-info"] a',
     'a[href*="/music/"]',
     '[class*="MusicInfo"] span',
+  ]) || getFrom(null, [
+    '[data-e2e="browse-music"]',
+    'a[href*="/music/"]',
   ]) || ''
 
-  // Thumbnail from og:image
-  const thumbnailUrl = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || ''
+  const captions = title
 
   return {
     url,
     title,
     channelName,
     extensionData: {
-      views: parseCount(viewsText),
+      views: null,
       likes: parseCount(likesText),
       comments: parseCount(commentsText),
       captions,
       hashtags,
       bgm,
-      thumbnailUrl,
+      thumbnailUrl: '',
     },
   }
 }
