@@ -24,71 +24,96 @@ function parseCount(text) {
   return isNaN(n) ? null : n
 }
 
-function scrapeData() {
-  const url = window.location.href
+function getTextFromEl(el, selectors) {
+  for (const sel of selectors) {
+    const found = el?.querySelector(sel)
+    if (found?.textContent?.trim()) return found.textContent.trim()
+  }
+  return null
+}
 
-  // meta description format: "username on Instagram: 'caption'" or "X views - username on Instagram"
+function scrapeData() {
+  // Find the currently playing video and its article container
+  const videos = Array.from(document.querySelectorAll('video'))
+  const playingVideo = videos.find(v => !v.paused && v.readyState > 0) || videos[0]
+  const currentArticle = playingVideo?.closest('article, section, [role="presentation"]') || null
+
+  // --- URL ---
+  // Try to get the specific Reel URL from the article (feed case)
+  const reelLinkEl = currentArticle?.querySelector('a[href*="/reel/"], a[href*="/p/"]')
+  const reelHref = reelLinkEl?.getAttribute('href')
+  const url = reelHref
+    ? new URL(reelHref, location.origin).href
+    : window.location.href
+
+  // --- Article-based scraping (reliable in feed) ---
+  const articleCaption = getTextFromEl(currentArticle, [
+    'h1', 'span[class*="x193iq5w"]', 'div[class*="caption"] span',
+    'span._aacl._aaco._aacu._aacx._aad7._aade',
+  ])
+
+  const articleUsername = (() => {
+    if (!currentArticle) return ''
+    // Username links inside the article
+    const links = Array.from(currentArticle.querySelectorAll('a[href^="/"][role="link"], a[href^="/"][tabindex="0"]'))
+    for (const a of links) {
+      const txt = a.textContent?.trim()
+      if (txt && !txt.startsWith('#') && txt.length > 0 && txt.length < 50) return txt
+    }
+    return ''
+  })()
+
+  const articleHashtags = currentArticle
+    ? Array.from(currentArticle.querySelectorAll('a[href*="/explore/tags/"]'))
+        .map(el => el.textContent?.trim()).filter(Boolean)
+    : []
+
+  const articleBgm = getTextFromEl(currentArticle, [
+    'a[href*="/reels/audio/"]',
+    'span[class*="audio"]',
+    'div[class*="music"] a',
+  ]) || ''
+
+  // Thumbnail: prefer video poster, then og:image
+  const thumbnailUrl = playingVideo?.poster
+    || document.querySelector('meta[property="og:image"]')?.getAttribute('content')
+    || ''
+
+  // --- Meta tag fallback ---
   const metaDesc = document.querySelector('meta[name="description"]')?.getAttribute('content') || ''
   const ogDesc = document.querySelector('meta[property="og:description"]')?.getAttribute('content') || ''
-  const ogTitle = document.querySelector('meta[property="og:title"]')?.getAttribute('content') || ''
+  const descText = metaDesc || ogDesc
 
-  // Extract username from meta description "username on Instagram" pattern
-  const metaUserMatch = (metaDesc || ogDesc).match(/^(.+?)\s+on Instagram/i)
+  const metaUserMatch = descText.match(/^(.+?)\s+on Instagram/i)
   const metaUsername = metaUserMatch?.[1]?.trim() || ''
 
-  // Author username: prefer meta-extracted, fall back to DOM, then URL (skip "reels"/"p" path segments)
-  const urlUserMatch = url.match(/instagram\.com\/(?!reels\/|p\/|stories\/)([^/?]+)\//)
-  const channelName = metaUsername ||
-    getText([
-      'header a[role="link"]',
-      'a[href*="/"] span.notranslate',
-      'span._aacl._aaco._aacw._aacx._aad7._aade',
-    ]) || urlUserMatch?.[1] || ''
-
-  // Extract caption from meta description (after "username on Instagram: 'caption'" or just "on Instagram: caption")
-  const descText = metaDesc || ogDesc
   const metaCaptionMatch = descText.match(/on Instagram[:\s]+[\u201c\u2018'""]?([\s\S]+?)[\u201d\u2019'"""]?\s*$/i)
   const metaCaption = metaCaptionMatch?.[1]?.trim() || ''
 
-  // Caption / title from DOM or meta
-  const domCaption = getText([
-    'h1._aacl',
-    'span._aacl._aaco._aacu._aacx._aad7._aade',
-    'div._a9zs span',
-    'li[role="menuitem"] span',
-  ])
-  const caption = domCaption || metaCaption || ogTitle || metaDesc || document.title
+  const urlUserMatch = url.match(/instagram\.com\/(?!reels\/|p\/|stories\/)([^/?]+)\//)
 
-  // Likes
-  const likesText = getText([
+  // --- Merge: article > meta > url ---
+  const channelName = articleUsername || metaUsername || urlUserMatch?.[1] || ''
+  const caption = articleCaption || metaCaption || descText || document.title
+
+  const hashtagsFromCaption = (caption.match(/#[\w\u3000-\u9fff]+/g) || [])
+  const hashtags = [...new Set([...articleHashtags, ...hashtagsFromCaption])].join(' ')
+  const bgm = articleBgm || getText([
+    'a[href*="/reels/audio/"]',
+    'span[class*="audio-title"]',
+  ]) || ''
+
+  // Likes / Views
+  const likesText = getTextFromEl(currentArticle, [
     'section span[class*="html-span"]',
     'button[type="button"] span span',
     'a[href$="/liked_by/"] span',
-  ])
+  ]) || getText(['section span[class*="html-span"]', 'a[href$="/liked_by/"] span'])
 
-  // Views (Reels sometimes show view count)
-  const viewsText = getText([
+  const viewsText = getTextFromEl(currentArticle, [
     'span[class*="videoPlaybackPosition"]',
     'span[class*="views"]',
-  ])
-
-  // Hashtags from caption text and anchor tags
-  const hashtagAnchors = Array.from(document.querySelectorAll('a[href*="/explore/tags/"]'))
-    .map(el => el.textContent?.trim())
-    .filter(Boolean)
-  const hashtagsFromCaption = (caption.match(/#[\w\u3000-\u9fff]+/g) || [])
-  const hashtags = [...new Set([...hashtagAnchors, ...hashtagsFromCaption])].join(' ')
-
-  // BGM / audio name
-  const bgm = getText([
-    'span[class*="audio-title"]',
-    'div[class*="audio"] a',
-    'a[href*="/reels/audio/"]',
-    'span._aacl._aaco._aacu',
-  ]) || ''
-
-  // Thumbnail from og:image
-  const thumbnailUrl = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || ''
+  ]) || null
 
   return {
     url,
@@ -98,7 +123,7 @@ function scrapeData() {
       views: parseCount(viewsText),
       likes: parseCount(likesText),
       comments: null,
-      captions: metaCaption || domCaption || metaDesc,
+      captions: articleCaption || metaCaption || metaDesc,
       hashtags,
       bgm,
       thumbnailUrl,
