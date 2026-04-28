@@ -45,7 +45,9 @@ function scrapeData() {
     || urlUserMatch?.[1] || ''
 
   const domCaption = getText(['h1._aacl', 'span._aacl._aaco._aacu._aacx._aad7._aade'])
-  const caption = (metaCaption || domCaption || '').slice(0, 500)
+  // Strip bio section after ___ separator (Instagram posts often append profile bio)
+  const rawCaption = metaCaption || domCaption || ''
+  const caption = rawCaption.split(/_{3,}|—{2,}/)[0].trim().slice(0, 200)
 
   const hashtagAnchors = Array.from(document.querySelectorAll('a[href*="/explore/tags/"]'))
     .map(el => el.textContent?.trim()).filter(Boolean)
