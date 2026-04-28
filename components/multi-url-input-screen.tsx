@@ -4,7 +4,7 @@ import { useState } from "react"
 import { ArrowLeft, Plus, Trash2, Loader2, Layers } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { isLikelyYouTubeUrl } from "@/lib/youtube-video-id"
+import { detectPlatform } from "@/lib/platforms/types"
 import { cn } from "@/lib/utils"
 import type { MultiVideoAnalysis } from "@/lib/multi-video-analysis"
 import { useSupabaseAuth } from "@/components/supabase-auth-provider"
@@ -39,7 +39,7 @@ export function MultiUrlInputScreen({ onBack, onResults }: MultiUrlInputScreenPr
   const validate = (): string | null => {
     if (filledUrls.length < 2) return "URLを2本以上入力してください"
     for (const u of filledUrls) {
-      if (!isLikelyYouTubeUrl(u.trim())) return `YouTube URLではないURLが含まれています:\n${u.trim()}`
+      if (!detectPlatform(u.trim())) return `対応していないURLが含まれています:\n${u.trim()}`
     }
     return null
   }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { extractYouTubeVideoId, isLikelyYouTubeUrl } from "@/lib/youtube-video-id"
+import { extractYouTubeVideoId } from "@/lib/youtube-video-id"
+import { detectPlatform } from "@/lib/platforms/types"
 import { fetchYouTubeTranscriptLines } from "@/lib/youtube-transcript-lines"
 import {
   assertSupabaseForAnalyze,
@@ -19,6 +20,8 @@ const bodySchema = z.object({
 
 async function fetchVideoTitle(url: string): Promise<string> {
   try {
+    const platform = detectPlatform(url)
+    if (platform !== "youtube") return url
     const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`
     const res = await fetch(oembedUrl, { signal: AbortSignal.timeout(8000) })
     if (!res.ok) return url
@@ -134,10 +137,10 @@ export async function POST(req: NextRequest) {
   }
 
   const { urls } = parsed.data
-  const invalidUrls = urls.filter((u) => !isLikelyYouTubeUrl(u))
+  const invalidUrls = urls.filter((u) => !detectPlatform(u))
   if (invalidUrls.length > 0) {
     return NextResponse.json(
-      { error: `YouTube のURLではない可能性があります: ${invalidUrls[0]}` },
+      { error: `対応していないURLです: ${invalidUrls[0]}` },
       { status: 400 }
     )
   }
