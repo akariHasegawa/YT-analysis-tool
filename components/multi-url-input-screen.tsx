@@ -127,7 +127,7 @@ export function MultiUrlInputScreen({ onBack, onResults }: MultiUrlInputScreenPr
                 className={cn(
                   "flex-1 bg-[oklch(0.15_0.04_270_/_0.6)] border-[oklch(0.35_0.08_270_/_0.4)]",
                   "placeholder:text-muted-foreground/50 focus:border-[oklch(0.55_0.15_270_/_0.6)]",
-                  url && !isLikelyYouTubeUrl(url.trim()) && "border-red-500/50"
+                  url && !detectPlatform(url.trim()) && "border-red-500/50"
                 )}
                 disabled={loading}
               />

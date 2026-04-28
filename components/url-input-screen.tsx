@@ -5,13 +5,11 @@ import { useLanguage } from "@/lib/language-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ArrowRight, ArrowLeft, PlayCircle, Users, Search, Rocket, FileText, Lightbulb, TrendingUp, Sparkles } from "lucide-react"
-import { isLikelyYouTubeUrl } from "@/lib/youtube-video-id"
 import { detectPlatform } from "@/lib/platforms/types"
 import { DEFAULT_SAMPLE_SHORT_URLS } from "@/lib/default-sample-urls"
 import { cn } from "@/lib/utils"
 import type { AnalysisMode } from "@/components/mode-selection"
 
-type VideoType = "short" | "regular"
 
 interface UrlInputScreenProps {
   onAnalyze: (url: string, competitorUrl?: string) => void
@@ -60,15 +58,10 @@ export function UrlInputScreen({ onAnalyze, onBack, mode = "buzz" }: UrlInputScr
   const [competitorUrl, setCompetitorUrl] = useState("")
   const [error, setError] = useState("")
   const [competitorError, setCompetitorError] = useState("")
-  const [videoType, setVideoType] = useState<VideoType>("short")
 
   const styles = MODE_STYLES[mode as keyof typeof MODE_STYLES] ?? MODE_STYLES.buzz
   const ModeIcon = styles.icon
   const isGrowthMode = mode === "growth"
-
-  const detectedPlatform = detectPlatform(url.trim())
-  const isYouTube = detectedPlatform === "youtube" || detectedPlatform === null
-  const showVideoTypeSelector = isYouTube
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -82,8 +75,8 @@ export function UrlInputScreen({ onAnalyze, onBack, mode = "buzz" }: UrlInputScr
       hasError = true
     }
 
-    if (isGrowthMode && competitorUrl.trim() && !isLikelyYouTubeUrl(competitorUrl.trim())) {
-      setCompetitorError(t("input.error.invalidYoutube"))
+    if (isGrowthMode && competitorUrl.trim() && !detectPlatform(competitorUrl.trim())) {
+      setCompetitorError("YouTube・TikTok・Instagram のURLを入力してください")
       hasError = true
     }
 
@@ -149,41 +142,6 @@ export function UrlInputScreen({ onAnalyze, onBack, mode = "buzz" }: UrlInputScr
           style={{ borderColor: styles.borderAccent }}
         >
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-            {/* Video type selector: YouTube のみ表示 */}
-            {showVideoTypeSelector && (
-              <div className="flex flex-col gap-3">
-                <label className="text-sm font-medium text-foreground/90">{t("input.videoType")}</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setVideoType("short")}
-                    className={cn(
-                      "rounded-xl border py-3 text-sm font-semibold transition-all",
-                      videoType === "short"
-                        ? "border-transparent shadow-lg text-white"
-                        : "border-[oklch(0.5_0.1_270_/_0.25)] bg-[oklch(0.18_0.05_280_/_0.4)] text-muted-foreground hover:border-[oklch(0.55_0.14_270_/_0.35)] hover:text-foreground"
-                    )}
-                    style={videoType === "short" ? { background: styles.buttonBg } : {}}
-                  >
-                    {t("input.videoType.short")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setVideoType("regular")}
-                    className={cn(
-                      "rounded-xl border py-3 text-sm font-semibold transition-all",
-                      videoType === "regular"
-                        ? "border-transparent shadow-lg text-white"
-                        : "border-[oklch(0.5_0.1_270_/_0.25)] bg-[oklch(0.18_0.05_280_/_0.4)] text-muted-foreground hover:border-[oklch(0.55_0.14_270_/_0.35)] hover:text-foreground"
-                    )}
-                    style={videoType === "regular" ? { background: styles.buttonBg } : {}}
-                  >
-                    {t("input.videoType.regular")}
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Main URL input */}
             <div className="flex flex-col gap-2">
               <label htmlFor="video-url" className="text-sm font-medium text-foreground/90">
@@ -240,7 +198,7 @@ export function UrlInputScreen({ onAnalyze, onBack, mode = "buzz" }: UrlInputScr
                 {competitorError && <p className="text-sm text-[oklch(0.72_0.18_25)]">{competitorError}</p>}
                 
                 {/* Competitor comparison badge */}
-                {competitorUrl.trim() && isLikelyYouTubeUrl(competitorUrl.trim()) && (
+                {competitorUrl.trim() && detectPlatform(competitorUrl.trim()) && (
                   <div className="mt-2 flex items-center gap-2 rounded-lg bg-[oklch(0.2_0.08_60_/_0.4)] px-3 py-2 border border-[oklch(0.5_0.12_60_/_0.3)]">
                     <Sparkles className="h-4 w-4 text-[oklch(0.78_0.16_70)]" />
                     <span className="text-xs text-[oklch(0.85_0.1_75)]">
