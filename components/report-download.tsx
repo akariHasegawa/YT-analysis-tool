@@ -41,8 +41,12 @@ export function ReportDownload({ analysis, videoInfo, channelHint = "" }: Props)
       })
 
       if (!res.ok) {
-        const data = await res.json() as { error?: string }
-        throw new Error(data.error ?? "レポート生成に失敗しました")
+        let errMsg = "レポート生成に失敗しました"
+        try {
+          const data = await res.json() as { error?: string }
+          errMsg = data.error ?? errMsg
+        } catch { /* non-JSON response (e.g. timeout) */ }
+        throw new Error(errMsg)
       }
 
       const blob = await res.blob()
