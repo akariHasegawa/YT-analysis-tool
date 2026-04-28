@@ -43,10 +43,18 @@ function buildInternalReportHtml(req: ReportRequest): string {
       <p style="margin:0;font-size:13px;line-height:1.7;color:#cbd5e1">${esc(item)}</p>
     </div>`).join("")
 
-  const competitorBlock = analysis.competitorComparison ? `
+  const cc = analysis.competitorComparison
+  const competitorBlock = cc ? `
     <div style="background:#12161f;border-radius:12px;padding:24px;margin-bottom:24px">
       <h2 style="margin:0 0 16px;font-size:14px;font-weight:700;color:#f59e0b;letter-spacing:.05em">競合比較</h2>
-      <p style="margin:0;font-size:13px;line-height:1.8;color:#cbd5e1">${esc(analysis.competitorComparison)}</p>
+      ${[
+        { label: "競合の強み", items: cc.competitorStrengths },
+        { label: "自社の弱み", items: cc.yourWeaknesses },
+        { label: "優先改善点", items: cc.priorityImprovements },
+      ].map(({ label, items }) => `
+        <p style="font-size:11px;color:#64748b;margin:12px 0 4px">${label}</p>
+        <ul style="padding-left:16px;color:#cbd5e1;font-size:13px;line-height:1.8">${items.map(i => `<li>${esc(i)}</li>`).join("")}</ul>
+      `).join("")}
     </div>` : ""
 
   return `<!DOCTYPE html>
@@ -108,14 +116,15 @@ function buildInternalReportHtml(req: ReportRequest): string {
     <!-- HOOK / EMOTION / CTA / STRUCTURE -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
       ${[
-        { label: "HOOK", color: "#6366f1", value: analysis.hook },
-        { label: "EMOTION", color: "#f59e0b", value: analysis.emotion },
-        { label: "CTA", color: "#10b981", value: analysis.cta },
-        { label: "STRUCTURE", color: "#8b5cf6", value: analysis.structure },
-      ].map(({ label, color, value }) => `
+        { label: "HOOK", color: "#6366f1", block: analysis.hook },
+        { label: "EMOTION", color: "#f59e0b", block: analysis.emotion },
+        { label: "CTA", color: "#10b981", block: analysis.cta },
+        { label: "STRUCTURE", color: "#8b5cf6", block: analysis.structure },
+      ].map(({ label, color, block }) => `
         <div style="background:#12161f;border-left:3px solid ${color};border-radius:0 12px 12px 0;padding:16px">
-          <p style="font-size:10px;letter-spacing:.1em;color:${color};font-weight:700;margin-bottom:8px">${label}</p>
-          <p style="font-size:13px;line-height:1.7;color:#cbd5e1">${esc(value)}</p>
+          <p style="font-size:10px;letter-spacing:.1em;color:${color};font-weight:700;margin-bottom:4px">${label}</p>
+          <p style="font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:6px">${esc(block.value)}</p>
+          <p style="font-size:12px;line-height:1.7;color:#94a3b8">${esc(block.description)}</p>
         </div>`).join("")}
     </div>
 
