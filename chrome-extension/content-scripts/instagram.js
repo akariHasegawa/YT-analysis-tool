@@ -33,18 +33,25 @@ function getTextFromEl(el, selectors) {
 }
 
 function scrapeData() {
-  // Find the currently playing video and its article container
-  const videos = Array.from(document.querySelectorAll('video'))
-  const playingVideo = videos.find(v => !v.paused && v.readyState > 0) || videos[0]
-  const currentArticle = playingVideo?.closest('article, section, [role="presentation"]') || null
+  // URL is always window.location.href (Instagram SPA updates this correctly)
+  const url = window.location.href
 
-  // --- URL ---
-  // Try to get the specific Reel URL from the article (feed case)
-  const reelLinkEl = currentArticle?.querySelector('a[href*="/reel/"], a[href*="/p/"]')
-  const reelHref = reelLinkEl?.getAttribute('href')
-  const url = reelHref
-    ? new URL(reelHref, location.origin).href
-    : window.location.href
+  // Extract Reel ID from current URL to find the matching article
+  const reelIdMatch = url.match(/\/(reel|reels|p)\/([A-Za-z0-9_-]+)/)
+  const currentReelId = reelIdMatch?.[2] || ''
+
+  // Find article matching this specific Reel ID via its link
+  let currentArticle = null
+  if (currentReelId) {
+    const matchingLink = document.querySelector(`a[href*="${currentReelId}"]`)
+    currentArticle = matchingLink?.closest('article, section, [role="presentation"]') || null
+  }
+  // Fallback: currently playing video's parent
+  if (!currentArticle) {
+    const videos = Array.from(document.querySelectorAll('video'))
+    const playingVideo = videos.find(v => !v.paused && v.readyState > 0) || videos[0]
+    currentArticle = playingVideo?.closest('article, section, [role="presentation"]') || null
+  }
 
   // --- Article-based scraping (reliable in feed) ---
   const articleCaption = getTextFromEl(currentArticle, [
