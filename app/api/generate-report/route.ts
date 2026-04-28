@@ -19,6 +19,128 @@ interface ReportRequest {
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+function esc(s: string | null | undefined): string {
+  return (s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+
+function buildInternalReportHtml(req: ReportRequest): string {
+  const { analysis, videoInfo } = req
+  const today = new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })
+  const score = analysis.retentionScore ?? 0
+  const reasons = analysis.retentionReasons ?? []
+  const improvements = analysis.improvementIdeas ?? []
+  const nextIdeas = analysis.nextVideoIdeas ?? []
+
+  const reasonItems = reasons.map(r => `<li style="margin-bottom:6px">${esc(r)}</li>`).join("")
+  const improvementItems = improvements.map((item, i) => `
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid #1e2433">
+      <span style="flex-shrink:0;width:28px;height:28px;border-radius:50%;background:#6366f1;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">${i + 1}</span>
+      <p style="margin:0;font-size:13px;line-height:1.7;color:#cbd5e1">${esc(item)}</p>
+    </div>`).join("")
+  const nextIdeaItems = nextIdeas.map((item, i) => `
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid #1e2433">
+      <span style="flex-shrink:0;width:28px;height:28px;border-radius:50%;background:#8b5cf6;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">${i + 1}</span>
+      <p style="margin:0;font-size:13px;line-height:1.7;color:#cbd5e1">${esc(item)}</p>
+    </div>`).join("")
+
+  const competitorBlock = analysis.competitorComparison ? `
+    <div style="background:#12161f;border-radius:12px;padding:24px;margin-bottom:24px">
+      <h2 style="margin:0 0 16px;font-size:14px;font-weight:700;color:#f59e0b;letter-spacing:.05em">競合比較</h2>
+      <p style="margin:0;font-size:13px;line-height:1.8;color:#cbd5e1">${esc(analysis.competitorComparison)}</p>
+    </div>` : ""
+
+  return `<!DOCTYPE html>
+<html lang="ja">
+<head><meta charset="UTF-8"><style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f1117; color: #e2e8f0; font-family: "Helvetica Neue", Arial, sans-serif; padding: 32px; }
+  @page { size: A4; margin: 0; }
+</style></head>
+<body>
+  <div style="max-width:860px;margin:0 auto">
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:20px;border-bottom:2px solid #1e2433">
+      <div>
+        <p style="font-size:10px;letter-spacing:.2em;color:#64748b;margin-bottom:6px">INTERNAL ANALYSIS REPORT</p>
+        <h1 style="font-size:26px;font-weight:800;color:#fff">動画分析レポート</h1>
+      </div>
+      <div style="text-align:right">
+        <p style="font-size:12px;color:#64748b">作成日</p>
+        <p style="font-size:16px;font-weight:700;color:#6366f1">${today}</p>
+        <p style="font-size:11px;color:#475569;margin-top:4px">${esc(videoInfo.url ?? "")}</p>
+      </div>
+    </div>
+
+    <!-- Video Info -->
+    <div style="background:#12161f;border-radius:12px;padding:20px;margin-bottom:24px;display:flex;gap:24px;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <p style="font-size:10px;color:#64748b;margin-bottom:4px">タイトル</p>
+        <p style="font-size:14px;font-weight:600;color:#e2e8f0">${esc(videoInfo.title)}</p>
+      </div>
+      <div>
+        <p style="font-size:10px;color:#64748b;margin-bottom:4px">チャンネル</p>
+        <p style="font-size:14px;font-weight:600;color:#e2e8f0">${esc(videoInfo.channelName)}</p>
+      </div>
+      ${videoInfo.views ? `<div><p style="font-size:10px;color:#64748b;margin-bottom:4px">再生数</p><p style="font-size:14px;font-weight:600;color:#e2e8f0">${videoInfo.views.toLocaleString("ja-JP")}</p></div>` : ""}
+      ${videoInfo.publishedAt ? `<div><p style="font-size:10px;color:#64748b;margin-bottom:4px">公開日</p><p style="font-size:14px;font-weight:600;color:#e2e8f0">${esc(videoInfo.publishedAt)}</p></div>` : ""}
+    </div>
+
+    <!-- Score -->
+    <div style="background:#12161f;border-radius:12px;padding:24px;margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:24px;margin-bottom:16px">
+        <div style="text-align:center">
+          <p style="font-size:52px;font-weight:800;color:#6366f1;line-height:1">${score}</p>
+          <p style="font-size:11px;color:#64748b">/ 100</p>
+        </div>
+        <div style="flex:1">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <p style="font-size:13px;font-weight:600;color:#e2e8f0">視聴維持率スコア</p>
+            <span style="background:#6366f1;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px">${esc(analysis.retentionLabel ?? "")}</span>
+          </div>
+          <div style="background:#1e2433;border-radius:4px;height:10px;overflow:hidden">
+            <div style="width:${score}%;height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6)"></div>
+          </div>
+          ${reasonItems ? `<ul style="margin-top:12px;padding-left:16px;color:#94a3b8;font-size:12px;line-height:1.8">${reasonItems}</ul>` : ""}
+        </div>
+      </div>
+    </div>
+
+    <!-- HOOK / EMOTION / CTA / STRUCTURE -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+      ${[
+        { label: "HOOK", color: "#6366f1", value: analysis.hook },
+        { label: "EMOTION", color: "#f59e0b", value: analysis.emotion },
+        { label: "CTA", color: "#10b981", value: analysis.cta },
+        { label: "STRUCTURE", color: "#8b5cf6", value: analysis.structure },
+      ].map(({ label, color, value }) => `
+        <div style="background:#12161f;border-left:3px solid ${color};border-radius:0 12px 12px 0;padding:16px">
+          <p style="font-size:10px;letter-spacing:.1em;color:${color};font-weight:700;margin-bottom:8px">${label}</p>
+          <p style="font-size:13px;line-height:1.7;color:#cbd5e1">${esc(value)}</p>
+        </div>`).join("")}
+    </div>
+
+    ${competitorBlock}
+
+    <!-- Improvement Ideas -->
+    ${improvements.length ? `
+    <div style="background:#12161f;border-radius:12px;padding:24px;margin-bottom:24px">
+      <h2 style="font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:4px">改善アイデア</h2>
+      <p style="font-size:11px;color:#64748b;margin-bottom:12px">Improvement Ideas</p>
+      ${improvementItems}
+    </div>` : ""}
+
+    <!-- Next Video Ideas -->
+    ${nextIdeas.length ? `
+    <div style="background:#12161f;border-radius:12px;padding:24px">
+      <h2 style="font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:4px">次の動画アイデア</h2>
+      <p style="font-size:11px;color:#64748b;margin-bottom:12px">Next Video Ideas</p>
+      ${nextIdeaItems}
+    </div>` : ""}
+  </div>
+</body>
+</html>`
+}
+
 function buildPrompt(req: ReportRequest): string {
   const { analysis, videoInfo, reportType, clientName, clientCompany } = req
   const today = new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })
@@ -201,24 +323,28 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Claude でHTML生成
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 8192,
-      messages: [
-        {
-          role: "user",
-          content: buildPrompt({ analysis, videoInfo, reportType, clientName, clientCompany }),
-        },
-      ],
-    })
-
-    let html = message.content
-      .filter((b) => b.type === "text")
-      .map((b) => (b as { type: "text"; text: string }).text)
-      .join("")
-    // Strip markdown code block wrapper if Claude returns ```html ... ```
-    html = html.replace(/^```html\s*/i, "").replace(/\s*```\s*$/, "")
+    let html: string
+    if (reportType === "internal") {
+      // 内部用はテンプレートで直接生成（Claude不要）
+      html = buildInternalReportHtml({ analysis, videoInfo, reportType, clientName, clientCompany })
+    } else {
+      // クライアント用・台本はClaudeで生成
+      const message = await client.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 8192,
+        messages: [
+          {
+            role: "user",
+            content: buildPrompt({ analysis, videoInfo, reportType, clientName, clientCompany }),
+          },
+        ],
+      })
+      html = message.content
+        .filter((b) => b.type === "text")
+        .map((b) => (b as { type: "text"; text: string }).text)
+        .join("")
+      html = html.replace(/^```html\s*/i, "").replace(/\s*```\s*$/, "")
+    }
 
     // HTMLをPDFに変換
     const pdfBuffer = await htmlToPdf(html)
