@@ -152,7 +152,7 @@ export function ReportDownload({ analysis, videoInfo, channelHint = "" }: Props)
           </div>
 
           <p className="text-[11px] text-muted-foreground">
-            ※ ClaudeがHTMLを生成しPDF変換します。30秒ほどかかります。
+            ※ 内部用：約30秒。クライアント用・台本：AIがレポートを作成するため2〜3分かかります。生成中はリロードしないでください。
           </p>
         </div>
       )}
