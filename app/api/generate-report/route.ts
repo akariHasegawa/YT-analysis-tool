@@ -341,7 +341,7 @@ export async function POST(req: NextRequest) {
       // 内部用はテンプレートで直接生成（Claude不要）
       html = buildInternalReportHtml({ analysis, videoInfo, reportType, clientName, clientCompany, accountMemo })
     } else {
-      // クライアント用・台本はClaudeで生成
+      // クライアント用・台本はClaudeで生成してHTMLのまま返す（ブラウザでprint→PDF）
       const message = await client.messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 8192,
@@ -357,15 +357,21 @@ export async function POST(req: NextRequest) {
         .map((b) => (b as { type: "text"; text: string }).text)
         .join("")
       html = html.replace(/^```html\s*/i, "").replace(/\s*```\s*$/, "")
-      // Inject Japanese font if not already present
-      if (!html.includes("fonts.googleapis.com")) {
-        const fontTag = `<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700;800&display=swap" rel="stylesheet">`
-        html = html.replace(/<head>/i, `<head>${fontTag}`)
-        html = html.replace(/font-family:[^;"']*/g, 'font-family: "Noto Sans JP", sans-serif')
-      }
+
+      // 印刷ボタンを先頭に注入
+      const printBtn = `<div style="position:fixed;top:16px;right:16px;z-index:9999;display:flex;gap:8px">
+        <button onclick="window.print()" style="background:#6366f1;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨 PDFで保存</button>
+        <button onclick="window.close()" style="background:#374151;color:#fff;border:none;padding:10px 16px;border-radius:8px;font-size:14px;cursor:pointer">✕</button>
+      </div><style>@media print{button{display:none!important}}</style>`
+      html = html.replace(/<body[^>]*>/i, (m) => `${m}${printBtn}`)
+
+      return new NextResponse(html, {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8", "X-Report-Type": "html" },
+      })
     }
 
-    // HTMLをPDFに変換
+    // 内部用のみPDF変換
     const pdfBuffer = await htmlToPdf(html)
 
     const typeLabels: Record<ReportType, string> = {

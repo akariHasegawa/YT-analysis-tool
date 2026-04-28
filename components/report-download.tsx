@@ -49,14 +49,23 @@ export function ReportDownload({ analysis, videoInfo, channelHint = "" }: Props)
         throw new Error(errMsg)
       }
 
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      const filename = res.headers.get("Content-Disposition")?.match(/filename\*=UTF-8''(.+)/)?.[1]
-      a.href = url
-      a.download = filename ? decodeURIComponent(filename) : `report_${reportType}.pdf`
-      a.click()
-      URL.revokeObjectURL(url)
+      if (res.headers.get("X-Report-Type") === "html") {
+        // クライアント用・台本：新しいタブで開いてブラウザのprint→PDF
+        const htmlText = await res.text()
+        const blob = new Blob([htmlText], { type: "text/html" })
+        const url = URL.createObjectURL(blob)
+        window.open(url, "_blank")
+        setTimeout(() => URL.revokeObjectURL(url), 10000)
+      } else {
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        const filename = res.headers.get("Content-Disposition")?.match(/filename\*=UTF-8''(.+)/)?.[1]
+        a.href = url
+        a.download = filename ? decodeURIComponent(filename) : `report_${reportType}.pdf`
+        a.click()
+        URL.revokeObjectURL(url)
+      }
     } catch (e) {
       alert(e instanceof Error ? e.message : "レポート生成に失敗しました")
     } finally {
