@@ -27,6 +27,7 @@ export default function Home() {
   const { t } = useLanguage()
   const tRef = useRef(t)
   tRef.current = t
+  const loadingStartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { session, refreshSession, supabase, isLoading: authLoading } = useSupabaseAuth()
 
@@ -125,6 +126,8 @@ export default function Home() {
 
       if (e.data?.type === 'AIAI_LOADING_START') {
         setAnalysisLoading(true)
+        if (loadingStartTimeoutRef.current) clearTimeout(loadingStartTimeoutRef.current)
+        loadingStartTimeoutRef.current = setTimeout(() => setAnalysisLoading(false), 8000)
         return
       }
 
@@ -223,6 +226,10 @@ export default function Home() {
     setAnalysisLoading(false)
     setReferenceInsights(null)
     setSelectedMode('buzz')
+    if (loadingStartTimeoutRef.current) {
+      clearTimeout(loadingStartTimeoutRef.current)
+      loadingStartTimeoutRef.current = null
+    }
     setAnalysisKey(k => k + 1)
     setScreen('results')
   }, [authLoading, pendingExtensionPayload, session])
