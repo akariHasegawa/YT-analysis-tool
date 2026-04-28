@@ -250,11 +250,11 @@ export function ResultsScreen({
     })
   }
 
-  const channelName = (videoInfo?.channelName ?? "").trim() || t("results.channelUnknown")
+  const channelName = (videoInfo?.channelName ?? "").trim() || (isShortFormPlatform ? "" : t("results.channelUnknown"))
   const rawTitle = (videoInfo?.title ?? "").trim()
-  const isGenericTitle = /^(Instagram|TikTok)$/i.test(rawTitle)
-  const title = isGenericTitle && isShortFormPlatform && channelName
-    ? `@${channelName}`
+  const isGenericTitle = /^(Instagram|TikTok)$/i.test(rawTitle) || !rawTitle
+  const title = isShortFormPlatform && isGenericTitle
+    ? (channelName ? `@${channelName}` : "")
     : rawTitle || t("results.titleUnknown")
   const thumbnailUrl = videoInfo?.thumbnailUrl ?? ""
   const authorUrl = videoInfo?.authorUrl
@@ -322,7 +322,7 @@ export function ResultsScreen({
               </div>
               <div className="flex flex-1 flex-col justify-between gap-4 p-6 sm:p-7">
                 <div>
-                  <h3 className="text-balance text-lg font-bold leading-snug text-foreground sm:text-xl">{title}</h3>
+                  {title && <h3 className="text-balance text-lg font-bold leading-snug text-foreground sm:text-xl">{title}</h3>}
                   {authorUrl ? (
                     <a
                       href={authorUrl}
@@ -333,7 +333,7 @@ export function ResultsScreen({
                       {channelName}
                     </a>
                   ) : (
-                    <p className="mt-2 text-sm text-muted-foreground">{channelName}</p>
+                    channelName ? <p className="mt-2 text-sm text-muted-foreground">{channelName}</p> : null
                   )}
                   {videoUrl && (
                     <a
