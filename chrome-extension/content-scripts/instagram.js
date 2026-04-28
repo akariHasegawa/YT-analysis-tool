@@ -31,20 +31,21 @@ function scrapeData() {
   const ogDesc = document.querySelector('meta[property="og:description"]')?.getAttribute('content') || ''
   const descText = metaDesc || ogDesc
 
-  const metaUserMatch = descText.match(/^(.+?)\s+on Instagram/i)
-  const metaUsername = metaUserMatch?.[1]?.trim() || ''
+  // Format A: "username on Instagram: 'caption'"
+  // Format B: "Jan 16, 2026, 32K likes, 375 comments - username: 'caption'"
+  const fmtA = descText.match(/^(.+?)\s+on Instagram[:\s]+[\u201c\u2018'""]?([\s\S]+?)[\u201d\u2019'"""]?\s*$/i)
+  const fmtB = descText.match(/[-\u2013]\s*([\w._]+):\s*[\u201c\u2018'""]?([\s\S]+?)[\u201d\u2019'"""]?\s*$/)
 
-  const metaCaptionMatch = descText.match(/on Instagram[:\s]+[\u201c\u2018'""]?([\s\S]+?)[\u201d\u2019'"""]?\s*$/i)
-  const metaCaption = metaCaptionMatch?.[1]?.trim() || ''
+  const metaUsername = fmtA?.[1]?.trim() || fmtB?.[1]?.trim() || ''
+  const metaCaption = (fmtA?.[2] || fmtB?.[2])?.trim() || ''
 
   const urlUserMatch = url.match(/instagram\.com\/(?!reels\/|p\/|stories\/)([^/?]+)\//)
   const channelName = metaUsername
     || getText(['header a[role="link"]'])
     || urlUserMatch?.[1] || ''
 
-  const caption = metaCaption
-    || getText(['h1._aacl', 'span._aacl._aaco._aacu._aacx._aad7._aade'])
-    || descText || document.title
+  const domCaption = getText(['h1._aacl', 'span._aacl._aaco._aacu._aacx._aad7._aade'])
+  const caption = (metaCaption || domCaption || '').slice(0, 500)
 
   const hashtagAnchors = Array.from(document.querySelectorAll('a[href*="/explore/tags/"]'))
     .map(el => el.textContent?.trim()).filter(Boolean)

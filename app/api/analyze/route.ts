@@ -220,8 +220,9 @@ import { NextRequest, NextResponse } from "next/server"
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
     }
 
-    const { url, title, channelName, publishedAt, viewCount, duration, thumbnailUrl, mode, competitorUrl, extensionData } =
-      parsed.data
+    const { url, publishedAt, viewCount, duration, thumbnailUrl, mode, competitorUrl, extensionData } = parsed.data
+    const title = parsed.data.title.slice(0, 300)
+    const channelName = parsed.data.channelName.slice(0, 100)
 
     const platform = detectPlatform(url)
     if (!platform) {
@@ -304,8 +305,9 @@ import { NextRequest, NextResponse } from "next/server"
         }\n`
       : ""
 
-    // For TikTok/Instagram: use extensionData.thumbnailUrl if no YouTube thumbnail
-    const effectiveThumbnailUrl = thumbnailUrl || extensionData?.thumbnailUrl || null
+    // TikTok/Instagram og:image URLs are often session-limited and cause OpenAI 400 errors
+    // Only use YouTube thumbnails (stable public URLs) for OpenAI vision
+    const effectiveThumbnailUrl = (platform === 'youtube' ? (thumbnailUrl || null) : null)
 
     let thumbForOpenAi: string | undefined
     if (effectiveThumbnailUrl != null) {
