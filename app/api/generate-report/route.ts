@@ -349,7 +349,7 @@ export async function POST(req: NextRequest) {
       // クライアント用・台本はClaudeで生成してHTMLのまま返す（ブラウザでprint→PDF）
       const message = await client.messages.create({
         model: "claude-sonnet-4-6",
-        max_tokens: 8192,
+        max_tokens: reportType === "script" ? 16000 : 8192,
         messages: [
           {
             role: "user",
