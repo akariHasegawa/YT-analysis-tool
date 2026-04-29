@@ -303,7 +303,7 @@ export function ResultsScreen({
 
         <section className="space-y-4">
           <SectionLabel>{t("results.videoInfo")}</SectionLabel>
-          {metadataError ? (
+          {metadataError && !metadataError.includes("missing_url") && !metadataError.includes("invalid_youtube") ? (
             <div className="rounded-2xl border border-[oklch(0.75_0.15_85_/_0.35)] bg-[oklch(0.28_0.08_85_/_0.2)] px-5 py-4 text-sm leading-relaxed text-[oklch(0.92_0.05_95)]">
               {metadataError}
             </div>

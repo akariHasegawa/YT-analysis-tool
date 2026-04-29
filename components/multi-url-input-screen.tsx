@@ -12,9 +12,10 @@ import { useSupabaseAuth } from "@/components/supabase-auth-provider"
 interface MultiUrlInputScreenProps {
   onBack: () => void
   onResults: (analysis: MultiVideoAnalysis, urls: string[]) => void
+  isLoading?: boolean
 }
 
-export function MultiUrlInputScreen({ onBack, onResults }: MultiUrlInputScreenProps) {
+export function MultiUrlInputScreen({ onBack, onResults, isLoading = false }: MultiUrlInputScreenProps) {
   const { session } = useSupabaseAuth()
   const [urls, setUrls] = useState<string[]>(["", ""])
   const [loading, setLoading] = useState(false)
@@ -78,6 +79,15 @@ export function MultiUrlInputScreen({ onBack, onResults }: MultiUrlInputScreenPr
     } finally {
       setLoading(false)
     }
+  }
+
+  if (isLoading) {
+    return (
+      <main className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center gap-6 px-4">
+        <Loader2 className="h-10 w-10 animate-spin text-[oklch(0.72_0.18_85)]" />
+        <p className="text-sm font-medium text-muted-foreground">複数動画を分析中...</p>
+      </main>
+    )
   }
 
   return (

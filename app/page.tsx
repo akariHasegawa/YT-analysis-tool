@@ -260,7 +260,8 @@ export default function Home() {
     }
     const videos = pendingMultiPayload
     setPendingMultiPayload(null)
-    setScreen("processing")
+    setAnalysisLoading(true)
+    setScreen("multi-input")
     ;(async () => {
       try {
         const res = await fetch("/api/analyze-multi", {
@@ -276,8 +277,10 @@ export default function Home() {
         if (!data.analysis) throw new Error("分析結果が空でした")
         setMultiAnalysis(data.analysis)
         setMultiAnalyzedUrls(videos.map((v) => v.url))
+        setAnalysisLoading(false)
         setScreen("multi-results")
       } catch (err) {
+        setAnalysisLoading(false)
         alert(err instanceof Error ? err.message : "複数動画分析に失敗しました")
         setScreen("landing")
       }
@@ -494,7 +497,7 @@ export default function Home() {
   }
 
   if (screen === "multi-input") {
-    return <MultiUrlInputScreen onBack={handleBackToModes} onResults={handleMultiResults} />
+    return <MultiUrlInputScreen onBack={handleBackToModes} onResults={handleMultiResults} isLoading={analysisLoading} />
   }
 
   if (screen === "multi-results" && multiAnalysis) {
