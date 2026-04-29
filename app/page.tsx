@@ -148,25 +148,27 @@ export default function Home() {
         }>
         if (!videos || videos.length < 2) return
         setScreen("processing")
-        try {
-          const res = await fetch("/api/analyze-multi", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-            },
-            body: JSON.stringify({ videos }),
-          })
-          const data = await res.json() as { analysis?: MultiVideoAnalysis; error?: string; message?: string }
-          if (!res.ok) throw new Error(data.message || data.error || `エラー: ${res.status}`)
-          if (!data.analysis) throw new Error("分析結果が空でした")
-          setMultiAnalysis(data.analysis)
-          setMultiAnalyzedUrls(videos.map((v) => v.url))
-          setScreen("multi-results")
-        } catch (e) {
-          alert(e instanceof Error ? e.message : "複数動画分析に失敗しました")
-          setScreen("landing")
-        }
+        ;(async () => {
+          try {
+            const res = await fetch("/api/analyze-multi", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+              },
+              body: JSON.stringify({ videos }),
+            })
+            const data = await res.json() as { analysis?: MultiVideoAnalysis; error?: string; message?: string }
+            if (!res.ok) throw new Error(data.message || data.error || `エラー: ${res.status}`)
+            if (!data.analysis) throw new Error("分析結果が空でした")
+            setMultiAnalysis(data.analysis)
+            setMultiAnalyzedUrls(videos.map((v) => v.url))
+            setScreen("multi-results")
+          } catch (err) {
+            alert(err instanceof Error ? err.message : "複数動画分析に失敗しました")
+            setScreen("landing")
+          }
+        })()
         return
       }
 
