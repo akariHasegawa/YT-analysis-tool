@@ -23,6 +23,7 @@ export function SignupModal({ isOpen, onClose, onAuthSuccess }: SignupModalProps
   const [emailError, setEmailError] = useState("")
   const [passwordError, setPasswordError] = useState("")
   const [isLoading, setIsLoading] = useState<"google" | "email" | null>(null)
+  const [isLoginMode, setIsLoginMode] = useState(false)
 
   if (!isOpen) return null
 
@@ -71,11 +72,9 @@ export function SignupModal({ isOpen, onClose, onAuthSuccess }: SignupModalProps
     setPasswordError("")
     setIsLoading("email")
     const origin = typeof window !== "undefined" ? window.location.origin : ""
-    const { error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: { emailRedirectTo: `${origin}/auth/callback` },
-    })
+    const { error } = isLoginMode
+      ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
+      : await supabase.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${origin}/auth/callback` } })
     setIsLoading(null)
     if (error) {
       setEmailError(error.message)
@@ -112,7 +111,7 @@ export function SignupModal({ isOpen, onClose, onAuthSuccess }: SignupModalProps
                   </div>
                 </div>
                 <h2 className="mb-2 font-display text-lg font-bold leading-snug text-foreground sm:text-xl">
-                  結果を保存・続けて使うには登録を
+                  {isLoginMode ? "ログイン" : "結果を保存・続けて使うには登録を"}
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   分析結果はこのまま表示されたままです。閉じても結果は消えません。無料でメールまたは Google から続けられます。
@@ -222,11 +221,19 @@ export function SignupModal({ isOpen, onClose, onAuthSuccess }: SignupModalProps
                   )}
                 >
                   {isLoading === "email" ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-                  {t("signup.email") || "メールで登録"}
+                  {isLoginMode ? "ログイン" : "メールで登録"}
                 </Button>
               </form>
 
-              <p className="mt-6 text-center text-[10px] leading-relaxed text-muted-foreground">
+              <button
+                type="button"
+                onClick={() => { setIsLoginMode(!isLoginMode); setEmailError(""); setPasswordError("") }}
+                className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {isLoginMode ? "アカウントをお持ちでない方は新規登録" : "すでにアカウントをお持ちの方はログイン"}
+              </button>
+
+              <p className="mt-4 text-center text-[10px] leading-relaxed text-muted-foreground">
                 {t("signup.terms") || "登録することで、利用規約とプライバシーポリシーに同意したものとみなされます。"}
               </p>
             </div>
