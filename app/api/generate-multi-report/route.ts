@@ -5,7 +5,7 @@ import type { MultiVideoAnalysis } from "@/lib/multi-video-analysis"
 export const runtime = "nodejs"
 export const maxDuration = 60
 
-export type MultiReportType = "internal" | "script"
+export type MultiReportType = "internal" | "client" | "script"
 
 interface MultiReportRequest {
   analysis: MultiVideoAnalysis
@@ -155,6 +155,99 @@ function buildInternalHtml(req: MultiReportRequest): string {
     <h2 style="color:#e2e8f0">次回作アイデア</h2>
     <p style="font-size:11px;color:#64748b;margin-bottom:10px">Next Video Ideas</p>
     ${nextIdeaItems}
+  </div>
+
+</div>
+</body>
+</html>`
+}
+
+function buildClientHtml(req: MultiReportRequest): string {
+  const { analysis, urls, clientName, clientCompany, accountMemo } = req
+  const today = new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })
+
+  const videoList = analysis.videoSummaries.map((v, i) =>
+    `<li style="margin-bottom:6px"><strong>${esc(v.title || urls[i] || `動画${i + 1}`)}</strong>${v.keyFeature ? `<br><span style="font-size:12px;color:#64748b">${esc(v.keyFeature)}</span>` : ""}</li>`
+  ).join("")
+
+  const makePatternList = (items: string[], color: string) =>
+    items.map((item, i) => `
+      <div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f1f5f9;page-break-inside:avoid">
+        <div style="flex-shrink:0;width:20px;height:20px;border-radius:50%;background:${color};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${i + 1}</div>
+        <p style="margin:0;font-size:13px;color:#374151">${esc(item)}</p>
+      </div>`).join("")
+
+  const successItems = makePatternList(analysis.keySuccessFactors, "#f59e0b")
+  const nextIdeaItems = makePatternList(analysis.nextVideoIdeas, "#6366f1")
+
+  return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  ${COMMON_STYLE}
+  body { background: #ffffff; color: #1e293b; }
+  h2 { color: #6366f1; }
+  .section { background: #fff; border: 1px solid #e2e8f0; }
+  @media print { button { display: none !important; } }
+</style>
+</head>
+<body>
+<div style="max-width:800px;margin:0 auto">
+
+  <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:12px;padding:32px;margin-bottom:28px;color:#fff">
+    <p style="font-size:10px;letter-spacing:.2em;opacity:.7;margin-bottom:8px">AI VIDEO ANALYSIS REPORT</p>
+    <h1 style="font-size:24px;font-weight:800;color:#fff;margin-bottom:8px">複数動画 共通点分析レポート</h1>
+    ${clientCompany ? `<p style="font-size:14px;opacity:.9">${esc(clientCompany)}${clientName ? ` ${esc(clientName)} 様` : ""}</p>` : ""}
+    <p style="font-size:12px;opacity:.7;margin-top:8px">${today}　作成：${esc(accountMemo || "担当者")}</p>
+  </div>
+
+  <!-- 分析対象 -->
+  <div class="section" style="margin-bottom:20px;border-radius:8px;padding:20px">
+    <h2 style="margin-bottom:12px">分析対象動画（${urls.length}本）</h2>
+    <ul style="padding-left:20px;color:#374151;font-size:13px">${videoList}</ul>
+    ${analysis.commonStructure ? `
+    <div style="margin-top:16px;background:#f8faff;border-left:3px solid #6366f1;padding:12px 16px;border-radius:0 6px 6px 0">
+      <p style="font-size:11px;font-weight:700;color:#6366f1;margin-bottom:4px">共通する動画の構成パターン</p>
+      <p style="font-size:13px;color:#374151;line-height:1.8">${esc(analysis.commonStructure)}</p>
+    </div>` : ""}
+  </div>
+
+  <!-- 共通パターン -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
+    <div class="section" style="border-radius:8px;padding:16px">
+      <h2 style="font-size:13px;margin-bottom:10px">共通フックパターン</h2>
+      ${makePatternList(analysis.commonHookPatterns, "#6366f1")}
+    </div>
+    <div class="section" style="border-radius:8px;padding:16px">
+      <h2 style="font-size:13px;color:#f59e0b;margin-bottom:10px">共通感情設計</h2>
+      ${makePatternList(analysis.commonEmotionPatterns, "#f59e0b")}
+    </div>
+    <div class="section" style="border-radius:8px;padding:16px">
+      <h2 style="font-size:13px;color:#10b981;margin-bottom:10px">共通CTA</h2>
+      ${makePatternList(analysis.commonCTAPatterns, "#10b981")}
+    </div>
+  </div>
+
+  <!-- 成功要因 -->
+  <div class="section" style="border-radius:8px;padding:20px;margin-bottom:20px">
+    <h2 style="margin-bottom:4px">成功要因 TOP${analysis.keySuccessFactors.length}</h2>
+    <p style="font-size:12px;color:#94a3b8;margin-bottom:12px">バズった動画に共通する重要ポイントです</p>
+    ${successItems}
+  </div>
+
+  <!-- 次回コンテンツ案 -->
+  <div class="section" style="border-radius:8px;padding:20px;margin-bottom:20px">
+    <h2 style="margin-bottom:4px">次回コンテンツ案（${analysis.nextVideoIdeas.length}件）</h2>
+    <p style="font-size:12px;color:#94a3b8;margin-bottom:12px">共通パターンを活かした次回作のご提案です</p>
+    ${nextIdeaItems}
+  </div>
+
+  <!-- フッター -->
+  <div style="text-align:center;padding:16px 0;border-top:1px solid #e2e8f0">
+    <p style="font-size:11px;color:#94a3b8">本レポートはAIによる動画分析を基に作成されています</p>
   </div>
 
 </div>
@@ -345,6 +438,8 @@ export async function POST(req: NextRequest) {
 
   const html = reportType === "internal"
     ? buildInternalHtml({ analysis, urls, reportType, clientName, clientCompany, accountMemo })
+    : reportType === "client"
+    ? buildClientHtml({ analysis, urls, reportType, clientName, clientCompany, accountMemo })
     : buildScriptHtml({ analysis, urls, reportType, clientName, clientCompany, accountMemo })
 
   const printBtn = `<div style="position:fixed;top:16px;right:16px;z-index:9999;display:flex;gap:8px">

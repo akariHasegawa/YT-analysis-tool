@@ -224,6 +224,7 @@ function ResultBox({ label, sublabel, text, accentColor }: { label: string; subl
 
 const MULTI_REPORT_TYPES: { type: MultiReportType; label: string; description: string }[] = [
   { type: "internal", label: "内部用レポート", description: "全データ詳細・自分用" },
+  { type: "client", label: "クライアント用レポート", description: "丁寧な文体・会社名入り" },
   { type: "script", label: "プレゼン台本", description: "クライアントへの説明用" },
 ]
 
