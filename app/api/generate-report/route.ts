@@ -154,6 +154,196 @@ function buildInternalReportHtml(req: ReportRequest): string {
 </html>`
 }
 
+function buildScriptReportHtml(req: ReportRequest): string {
+  const { analysis, videoInfo, clientName, clientCompany, accountMemo } = req
+  const today = new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })
+  const score = analysis.retentionScore ?? 0
+  const improvements = analysis.improvementIdeas ?? []
+  const nextIdeas = analysis.nextVideoIdeas ?? []
+  const cc = analysis.competitorComparison
+
+  const scoreLabel = score >= 80 ? "非常に高い" : score >= 60 ? "高い" : score >= 40 ? "普通" : "要改善"
+
+  const improvementItems = improvements.map((item, i) => `
+    <div class="item">
+      <span class="badge purple">${i + 1}</span>
+      <p>${esc(item)}</p>
+    </div>`).join("")
+
+  const nextIdeaItems = nextIdeas.map((item, i) => `
+    <div class="item">
+      <span class="badge green">${i + 1}</span>
+      <p>${esc(item)}</p>
+    </div>`).join("")
+
+  const competitorSection = cc ? `
+    <div class="section">
+      <h2>④ 競合比較（補足説明）</h2>
+      <p class="time-hint">約2分</p>
+      <p class="intro">競合動画と比較した場合の分析です。</p>
+      <h3>競合の強み</h3>
+      <ul>${cc.competitorStrengths.map(s => `<li>${esc(s)}</li>`).join("")}</ul>
+      <h3>自社の改善余地</h3>
+      <ul>${cc.yourWeaknesses.map(s => `<li>${esc(s)}</li>`).join("")}</ul>
+      <h3>優先改善ポイント</h3>
+      <ul>${cc.priorityImprovements.map(s => `<li>${esc(s)}</li>`).join("")}</ul>
+    </div>` : ""
+
+  const improvementSectionNum = cc ? "⑤" : "④"
+  const nextIdeaSectionNum = cc ? "⑥" : "⑤"
+  const summarySectionNum = cc ? "⑦" : "⑥"
+
+  return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f8f9fa; color: #1e293b; font-family: "Noto Sans JP", "Hiragino Sans", "Meiryo", sans-serif; padding: 32px; font-size: 14px; line-height: 1.8; }
+  @page { size: A4; margin: 16mm; }
+  h1 { font-size: 22px; font-weight: 800; color: #1e293b; }
+  h2 { font-size: 16px; font-weight: 700; color: #4f46e5; margin: 0 0 4px; }
+  h3 { font-size: 13px; font-weight: 700; color: #475569; margin: 12px 0 4px; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  p { margin-bottom: 8px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #4f46e5; padding-bottom: 16px; margin-bottom: 24px; }
+  .header-right { text-align: right; font-size: 12px; color: #64748b; }
+  .header-right strong { display: block; font-size: 14px; color: #1e293b; }
+  .video-meta { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+  .video-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .meta-item label { font-size: 11px; color: #64748b; display: block; }
+  .meta-item span { font-size: 13px; font-weight: 600; }
+  .score-bar { background: #e2e8f0; border-radius: 4px; height: 8px; margin: 6px 0; overflow: hidden; }
+  .score-fill { height: 100%; background: linear-gradient(90deg, #4f46e5, #7c3aed); border-radius: 4px; width: ${score}%; }
+  .section { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 20px; page-break-inside: avoid; }
+  .time-hint { font-size: 11px; color: #94a3b8; margin-bottom: 12px; }
+  .intro { background: #f1f5f9; border-left: 3px solid #4f46e5; padding: 10px 14px; border-radius: 0 6px 6px 0; margin-bottom: 12px; font-style: italic; }
+  .script-box { background: #fafafa; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 14px; margin: 8px 0; }
+  .script-box .label { font-size: 10px; font-weight: 700; color: #4f46e5; letter-spacing: .1em; margin-bottom: 6px; }
+  .analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .analysis-card { border-left: 3px solid #4f46e5; padding: 10px 14px; background: #f8faff; border-radius: 0 6px 6px 0; page-break-inside: avoid; }
+  .analysis-card .card-label { font-size: 10px; font-weight: 700; letter-spacing: .1em; color: #4f46e5; margin-bottom: 2px; }
+  .analysis-card .card-value { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .analysis-card .card-desc { font-size: 12px; color: #475569; }
+  .analysis-card.yellow { border-color: #f59e0b; } .analysis-card.yellow .card-label { color: #f59e0b; }
+  .analysis-card.green { border-color: #10b981; } .analysis-card.green .card-label { color: #10b981; }
+  .analysis-card.purple { border-color: #8b5cf6; } .analysis-card.purple .card-label { color: #8b5cf6; }
+  .item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #f1f5f9; page-break-inside: avoid; }
+  .item p { margin: 0; }
+  .badge { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: #4f46e5; color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .badge.purple { background: #7c3aed; }
+  .badge.green { background: #10b981; }
+  .qa-item { margin-bottom: 14px; page-break-inside: avoid; }
+  .qa-q { font-weight: 700; color: #4f46e5; margin-bottom: 4px; }
+  .qa-a { padding-left: 16px; color: #475569; }
+  @media print { button { display: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <p style="font-size:10px;letter-spacing:.2em;color:#94a3b8;margin-bottom:4px">PRESENTATION SCRIPT</p>
+    <h1>プレゼンテーション台本</h1>
+    ${clientCompany ? `<p style="font-size:13px;color:#475569;margin-top:4px">${esc(clientCompany)}${clientName ? ` ${esc(clientName)} 様` : ""}</p>` : ""}
+  </div>
+  <div class="header-right">
+    <strong>${today}</strong>
+    作成者: ${esc(accountMemo || "担当者")}
+  </div>
+</div>
+
+<div class="video-meta">
+  <div class="video-meta-grid">
+    <div class="meta-item"><label>動画タイトル</label><span>${esc(videoInfo.title)}</span></div>
+    <div class="meta-item"><label>チャンネル</label><span>${esc(accountMemo || videoInfo.channelName)}</span></div>
+    ${videoInfo.views ? `<div class="meta-item"><label>再生数</label><span>${videoInfo.views.toLocaleString("ja-JP")}</span></div>` : ""}
+    ${videoInfo.publishedAt ? `<div class="meta-item"><label>公開日</label><span>${esc(videoInfo.publishedAt)}</span></div>` : ""}
+  </div>
+  <div style="margin-top:12px">
+    <label style="font-size:11px;color:#64748b">視聴維持率スコア：<strong>${score}点 / 100点（${scoreLabel}）</strong></label>
+    <div class="score-bar"><div class="score-fill"></div></div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>① 挨拶・はじめに</h2>
+  <p class="time-hint">約1分</p>
+  <div class="script-box">
+    <div class="label">★ 開始トーク</div>
+    <p>本日はお時間をいただきありがとうございます。今回ご提出するのは「${esc(videoInfo.title)}」の動画分析レポートです。AIを活用した詳細な分析を行いましたので、改善提案を含めてご説明させていただきます。</p>
+  </div>
+</div>
+
+<div class="section">
+  <h2>② 分析概要</h2>
+  <p class="time-hint">約2分</p>
+  <div class="script-box">
+    <div class="label">★ 概要トーク</div>
+    <p>まずこちらの動画の全体的な評価ですが、視聴維持率スコアは<strong>${score}点</strong>で「${scoreLabel}」という結果になりました。${(analysis.retentionReasons ?? []).length > 0 ? `その理由として、${esc((analysis.retentionReasons ?? []).join("、"))}といった点が挙げられます。` : ""}</p>
+  </div>
+</div>
+
+<div class="section">
+  <h2>③ 詳細分析</h2>
+  <p class="time-hint">約3分</p>
+  <div class="analysis-grid">
+    <div class="analysis-card"><div class="card-label">HOOK（フック）</div><div class="card-value">${esc(analysis.hook?.value)}</div><div class="card-desc">${esc(analysis.hook?.description)}</div></div>
+    <div class="analysis-card yellow"><div class="card-label">EMOTION（感情設計）</div><div class="card-value">${esc(analysis.emotion?.value)}</div><div class="card-desc">${esc(analysis.emotion?.description)}</div></div>
+    <div class="analysis-card green"><div class="card-label">CTA（行動喚起）</div><div class="card-value">${esc(analysis.cta?.value)}</div><div class="card-desc">${esc(analysis.cta?.description)}</div></div>
+    <div class="analysis-card purple"><div class="card-label">STRUCTURE（構成）</div><div class="card-value">${esc(analysis.structure?.value)}</div><div class="card-desc">${esc(analysis.structure?.description)}</div></div>
+  </div>
+  <div class="script-box">
+    <div class="label">★ 詳細説明トーク</div>
+    <p>特に注目していただきたいのはフックの部分です。「${esc(analysis.hook?.value)}」という手法が使われており、${esc(analysis.hook?.description)}。感情設計の観点では「${esc(analysis.emotion?.value)}」が効果的に機能しています。</p>
+  </div>
+</div>
+
+${competitorSection}
+
+<div class="section">
+  <h2>${improvementSectionNum} 改善提案</h2>
+  <p class="time-hint">約3分</p>
+  <p class="intro">以下の改善点を実施することで、さらなる成果向上が期待できます。</p>
+  ${improvementItems || "<p style='color:#94a3b8'>改善提案データなし</p>"}
+</div>
+
+<div class="section">
+  <h2>${nextIdeaSectionNum} 次回コンテンツ案</h2>
+  <p class="time-hint">約2分</p>
+  <p class="intro">今回の分析結果をもとに、次回の動画コンテンツとして以下のアイデアをご提案します。</p>
+  ${nextIdeaItems || "<p style='color:#94a3b8'>次回コンテンツ案データなし</p>"}
+</div>
+
+<div class="section">
+  <h2>${summarySectionNum} まとめ・質疑応答</h2>
+  <p class="time-hint">約2分</p>
+  <div class="script-box">
+    <div class="label">★ まとめトーク</div>
+    <p>以上が今回の分析結果のご説明となります。視聴維持率スコア${score}点という結果を踏まえ、特に改善提案の${improvements.length > 0 ? `①〜③番目の項目` : "各項目"}から優先的に取り組まれることをおすすめします。ご不明な点がございましたら、何でもご質問ください。</p>
+  </div>
+  <h3>想定Q&A</h3>
+  <div class="qa-item">
+    <div class="qa-q">Q. スコアの基準はどのように決まっていますか？</div>
+    <div class="qa-a">A. 動画の構成要素（フック・感情設計・CTA・構成）を複合的に評価し、0〜100点でスコア化しています。80点以上が優秀な動画の目安となります。</div>
+  </div>
+  <div class="qa-item">
+    <div class="qa-q">Q. 改善にはどのくらいの時間がかかりますか？</div>
+    <div class="qa-a">A. 制作フローの見直し次第ですが、フックの改善だけであれば次回作からすぐに反映可能です。</div>
+  </div>
+  <div class="qa-item">
+    <div class="qa-q">Q. 次回コンテンツ案はどれを優先すべきですか？</div>
+    <div class="qa-a">A. 現在のチャンネルのテーマや視聴者層に最も近いものから着手されることをおすすめします。</div>
+  </div>
+</div>
+
+</body>
+</html>`
+}
+
 function buildPrompt(req: ReportRequest): string {
   const { analysis, videoInfo, reportType, clientName, clientCompany } = req
   const today = new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })
@@ -221,20 +411,17 @@ ${analysisJson}
 日付: ${today}
 
 ## 要件
-- 丁寧な日本語（です・ます調）
-- クライアントに伝わりやすい表現（専門用語を避ける）
-- 会社名・担当者名・日付をヘッダーに記載
-- ロゴ代わりに「AI動画分析レポート」のタイトルをデザイン
-- 改善提案はポジティブな表現で（「〜するとさらに効果的です」など）
-- 視聴維持率・改善点・次回推奨アクション（3点）を必ず記載
-- 次回動画コンテンツアイデアはnextVideoIdeasの全項目（${(analysis.nextVideoIdeas ?? []).length}件）を一つも省略せず全て記載すること
-- 各項目に必ず内容テキストを記載し、ラベルや見出しだけで終わらせない
-- 各セクションに `page-break-inside: avoid` を適用してページ途中で切れないようにする
-- ライトテーマ（背景 #ffffff、アクセント #6366f1）
 - 完全なHTMLを返す（<!DOCTYPE html>から</html>まで）
-- インラインCSSのみ使用
-- A4縦向きに最適化
-- 印刷に適したデザイン`
+- マークダウンのコードブロック禁止（HTMLを直接出力）
+- **CSSは必ず<style>ブロックにまとめ、インラインstyle属性は使わない**（トークン節約のため）
+- ライトテーマ（背景 #ffffff、アクセント #6366f1）、A4縦向き最適化、印刷適合
+- 丁寧な日本語（です・ます調）、専門用語を避ける
+- 会社名・担当者名・日付をヘッダーに記載
+- 改善提案はポジティブな表現で（「〜するとさらに効果的です」など）
+- 視聴維持率・改善点を必ず記載
+- 次回コンテンツアイデアはnextVideoIdeasの全${(analysis.nextVideoIdeas ?? []).length}件を番号付きで全て記載（省略禁止）
+- 各項目に必ず内容テキストを記載（見出しだけで終わらせない）
+- 各セクションに page-break-inside: avoid を適用`
   }
 
   // script
@@ -251,18 +438,25 @@ ${analysisJson}
 担当者: ${clientName ?? ""}
 日付: ${today}
 
-## 要件
-- 話し言葉（「〜ですね」「〜なんです」など自然な口語）
-- 所要時間の目安（各セクションに「約○分」を記載）
-- 構成: 挨拶→分析概要→詳細説明→改善提案（improvementIdeasの全項目）→次回コンテンツ案（nextVideoIdeasの全項目）→まとめ
-- 改善提案（${(analysis.improvementIdeas ?? []).length}件）と次回コンテンツ案（${(analysis.nextVideoIdeas ?? []).length}件）は必ず最後に出力し、各項目は優先度ラベルだけでなく内容テキストも必ず記載すること
-- 重要ポイントには「★」マーク
-- 質問への想定回答も含める
-- 各セクション・各項目に `page-break-inside: avoid` を適用してページ途中で切れないようにする
-- ライトテーマ（背景 #f8f9fa）
+## 出力要件
 - 完全なHTMLを返す（<!DOCTYPE html>から</html>まで）
-- インラインCSSのみ使用
-- A4縦向きに最適化`
+- マークダウンのコードブロック禁止（HTMLを直接出力）
+- **CSSは必ず<style>ブロックにまとめ、インラインstyle属性は使わない**（トークン節約のため）
+- ライトテーマ（背景 #f8f9fa）、A4縦向き最適化
+
+## 台本の構成（この順で全て出力すること）
+① 挨拶（約1分）
+② 分析概要（約2分）
+③ 詳細説明：フック・感情設計・CTA・構成（約3分）
+④ 改善提案 — improvementIdeasの全${(analysis.improvementIdeas ?? []).length}件を番号付きで、各項目の内容テキストを全て記載（省略禁止）
+⑤ 次回コンテンツ案 — nextVideoIdeasの全${(analysis.nextVideoIdeas ?? []).length}件を番号付きで、各項目の内容テキストを全て記載（省略禁止）
+⑥ まとめ・質疑応答（想定Q&A含む）
+
+## 文体・表現
+- 話し言葉（「〜ですね」「〜なんです」など自然な口語）
+- 各セクションに所要時間の目安（「約○分」）を記載
+- 重要ポイントには「★」マーク
+- page-break-inside: avoid を各セクションに適用`
 }
 
 async function htmlToPdf(html: string): Promise<Buffer> {
@@ -343,13 +537,15 @@ export async function POST(req: NextRequest) {
   try {
     let html: string
     if (reportType === "internal") {
-      // 内部用はテンプレートで直接生成（Claude不要）
       html = buildInternalReportHtml({ analysis, videoInfo, reportType, clientName, clientCompany, accountMemo })
+    } else if (reportType === "script") {
+      // 台本は静的テンプレートで生成（Claude不要・切り捨てなし）
+      html = buildScriptReportHtml({ analysis, videoInfo, reportType, clientName, clientCompany, accountMemo })
     } else {
-      // クライアント用・台本はClaudeで生成してHTMLのまま返す（ブラウザでprint→PDF）
+      // クライアント用のみClaudeで生成
       const message = await client.messages.create({
         model: "claude-sonnet-4-6",
-        max_tokens: reportType === "script" ? 16000 : 8192,
+        max_tokens: 8192,
         messages: [
           {
             role: "user",
@@ -362,14 +558,15 @@ export async function POST(req: NextRequest) {
         .map((b) => (b as { type: "text"; text: string }).text)
         .join("")
       html = html.replace(/^```html\s*/i, "").replace(/\s*```\s*$/, "")
+    }
 
-      // 印刷ボタンを先頭に注入
+    // client/script はHTMLをブラウザで開いてprint→PDF
+    if (reportType !== "internal") {
       const printBtn = `<div style="position:fixed;top:16px;right:16px;z-index:9999;display:flex;gap:8px">
         <button onclick="window.print()" style="background:#6366f1;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨 PDFで保存</button>
         <button onclick="window.close()" style="background:#374151;color:#fff;border:none;padding:10px 16px;border-radius:8px;font-size:14px;cursor:pointer">✕</button>
       </div><style>@media print{button{display:none!important}}</style>`
       html = html.replace(/<body[^>]*>/i, (m) => `${m}${printBtn}`)
-
       return new NextResponse(html, {
         status: 200,
         headers: { "Content-Type": "text/html; charset=utf-8", "X-Report-Type": "html" },
