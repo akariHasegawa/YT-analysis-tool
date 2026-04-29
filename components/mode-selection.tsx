@@ -79,6 +79,18 @@ export function ModeSelection({ onSelectMode, onBack, onExtensionGuide, userPlan
           {t("mode.back") || "戻る"}
         </button>
 
+        {/* Extension guide button (Pro/Business only) */}
+        {isPaid && onExtensionGuide && (
+          <button
+            type="button"
+            onClick={onExtensionGuide}
+            className="mb-6 flex w-full items-center justify-center gap-2 rounded-xl border border-[oklch(0.45_0.1_270_/_0.25)] py-3.5 text-sm font-medium text-muted-foreground transition-colors hover:border-[oklch(0.55_0.15_270_/_0.4)] hover:text-foreground"
+          >
+            <Chrome className="h-4 w-4" />
+            Chrome拡張機能のご案内（TikTok・Instagram対応）
+          </button>
+        )}
+
         {/* Plan badge */}
         {isPaid && (
           <div className="mb-6 flex items-center justify-center">
@@ -282,18 +294,6 @@ export function ModeSelection({ onSelectMode, onBack, onExtensionGuide, userPlan
             )}
           </button>
         </div>
-
-        {/* Extension guide button (Pro/Business only) */}
-        {isPaid && onExtensionGuide && (
-          <button
-            type="button"
-            onClick={onExtensionGuide}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-[oklch(0.45_0.1_270_/_0.25)] py-3.5 text-sm font-medium text-muted-foreground transition-colors hover:border-[oklch(0.55_0.15_270_/_0.4)] hover:text-foreground"
-          >
-            <Chrome className="h-4 w-4" />
-            Chrome拡張機能のご案内（TikTok・Instagram対応）
-          </button>
-        )}
       </div>
     </main>
   )
