@@ -15,11 +15,15 @@ import {
   Check,
   Loader2,
   Sparkles,
+  Download,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { MultiVideoAnalysis } from "@/lib/multi-video-analysis"
 import { useSupabaseAuth } from "@/components/supabase-auth-provider"
+import type { MultiReportType } from "@/app/api/generate-multi-report/route"
 
 interface MultiResultsScreenProps {
   analysis: MultiVideoAnalysis
@@ -218,6 +222,117 @@ function ResultBox({ label, sublabel, text, accentColor }: { label: string; subl
   )
 }
 
+const MULTI_REPORT_TYPES: { type: MultiReportType; label: string; description: string }[] = [
+  { type: "internal", label: "内部用レポート", description: "全データ詳細・自分用" },
+  { type: "script", label: "プレゼン台本", description: "クライアントへの説明用" },
+]
+
+function MultiReportDownload({ analysis, urls }: { analysis: MultiVideoAnalysis; urls: string[] }) {
+  const { session } = useSupabaseAuth()
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState<MultiReportType | null>(null)
+  const [clientName, setClientName] = useState("")
+  const [clientCompany, setClientCompany] = useState("")
+  const [accountMemo, setAccountMemo] = useState("")
+
+  const download = async (reportType: MultiReportType) => {
+    if (!session?.access_token) return
+    setLoading(reportType)
+    const newWin = window.open("", "_blank")
+    if (newWin) {
+      newWin.document.write(`<html><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9fafb"><p style="color:#6b7280;font-size:16px">レポートを生成中です。しばらくお待ちください...</p></body></html>`)
+      newWin.document.close()
+    }
+    try {
+      const res = await fetch("/api/generate-multi-report", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ analysis, urls, reportType, clientName, clientCompany, accountMemo }),
+      })
+      if (!res.ok) {
+        let errMsg = "レポート生成に失敗しました"
+        try { const d = await res.json() as { error?: string }; errMsg = d.error ?? errMsg } catch { /* non-JSON */ }
+        if (newWin) newWin.close()
+        throw new Error(errMsg)
+      }
+      const htmlText = await res.text()
+      if (newWin) {
+        newWin.document.open()
+        newWin.document.write(htmlText)
+        newWin.document.close()
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "レポート生成に失敗しました")
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-[oklch(0.6_0.15_70_/_0.4)] bg-[oklch(0.14_0.05_280_/_0.5)] overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-[oklch(0.18_0.06_280_/_0.4)] transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[oklch(0.3_0.12_70_/_0.5)]">
+            <FileText className="h-4 w-4 text-[oklch(0.85_0.15_75)]" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">レポート生成</p>
+            <p className="text-xs text-muted-foreground">ブラウザで開いてPDF保存</p>
+          </div>
+        </div>
+        {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+      </button>
+
+      {open && (
+        <div className="border-t border-[oklch(0.5_0.1_270_/_0.2)] px-6 pb-6 pt-4 space-y-4">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">アカウント名・メモ</label>
+            <input type="text" value={accountMemo} onChange={(e) => setAccountMemo(e.target.value)}
+              placeholder="@username など"
+              className="w-full rounded-lg border border-[oklch(0.5_0.1_270_/_0.3)] bg-[oklch(0.12_0.04_280_/_0.5)] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">会社名</label>
+              <input type="text" value={clientCompany} onChange={(e) => setClientCompany(e.target.value)}
+                placeholder="株式会社○○"
+                className="w-full rounded-lg border border-[oklch(0.5_0.1_270_/_0.3)] bg-[oklch(0.12_0.04_280_/_0.5)] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">担当者名</label>
+              <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)}
+                placeholder="山田 太郎"
+                className="w-full rounded-lg border border-[oklch(0.5_0.1_270_/_0.3)] bg-[oklch(0.12_0.04_280_/_0.5)] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none" />
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            {MULTI_REPORT_TYPES.map(({ type, label, description }) => (
+              <button key={type} type="button" onClick={() => download(type)} disabled={loading !== null}
+                className="flex items-center justify-between rounded-xl border border-[oklch(0.5_0.1_270_/_0.2)] bg-[oklch(0.16_0.05_280_/_0.4)] px-4 py-3 text-left transition-all hover:border-[oklch(0.6_0.14_265_/_0.4)] hover:bg-[oklch(0.2_0.06_275_/_0.5)] disabled:opacity-60 disabled:cursor-not-allowed">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{label}</p>
+                  <p className="text-xs text-muted-foreground">{description}</p>
+                </div>
+                {loading === type
+                  ? <span className="text-xs text-[oklch(0.72_0.14_260)]">生成中...</span>
+                  : <Download className="h-4 w-4 text-[oklch(0.72_0.14_260)]" />}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground">※ 新しいタブが開くので「🖨 PDFで保存」を押してください。</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
   const copy = async () => {
@@ -399,10 +514,15 @@ export function MultiResultsScreen({ analysis, urls, onReset }: MultiResultsScre
         </div>
 
         {/* Prompt generator */}
-        <div className="mb-8">
+        <div className="mb-6">
           <Section icon={Sparkles} title="台本・動画プロンプトを生成" accentColor="linear-gradient(135deg, oklch(0.55 0.2 180), oklch(0.6 0.2 260))">
             <PromptGenerator analysis={analysis} accentColor="oklch(0.55 0.2 180)" />
           </Section>
+        </div>
+
+        {/* Report download */}
+        <div className="mb-8">
+          <MultiReportDownload analysis={analysis} urls={urls} />
         </div>
 
         {/* Reset */}
