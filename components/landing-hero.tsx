@@ -27,7 +27,7 @@ export function LandingHero({ onGetStarted }: LandingHeroProps) {
       {/* Subheadline - New Version */}
       <div className="mt-8 space-y-4 text-center">
         {/* First line */}
-        <p className="text-base font-bold text-white sm:text-lg">あなたはURLを貼るだけ。</p>
+        <p className="text-base font-bold text-white sm:text-lg">URLを貼るか動画を見るか。<br className="sm:hidden" />あなたがやることはそれだけ。</p>
 
         {/* Three items with bullet points - staggered fade-up animation */}
         <div className="space-y-2">
