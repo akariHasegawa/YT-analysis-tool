@@ -32,7 +32,7 @@ function checkAndForward() {
   if (processing) return
   processing = true
 
-  chrome.storage.local.get(['aiai_session', 'aiai_pending'], (result) => {
+  chrome.storage.local.get(['aiai_session', 'aiai_pending', 'aiai_multi_pending'], (result) => {
     processing = false
 
     if (result.aiai_session?.access_token) {
@@ -43,9 +43,17 @@ function checkAndForward() {
       const pending = result.aiai_pending
       chrome.storage.local.remove('aiai_pending')
       window.postMessage({ type: 'AIAI_LOADING_START' }, TARGET)
-      // Delay to let setSession complete before sending data
       setTimeout(() => {
         window.postMessage({ type: 'AIAI_EXTENSION_PENDING', data: pending }, TARGET)
+      }, 800)
+    }
+
+    if (result.aiai_multi_pending) {
+      const multiPending = result.aiai_multi_pending
+      chrome.storage.local.remove('aiai_multi_pending')
+      window.postMessage({ type: 'AIAI_LOADING_START' }, TARGET)
+      setTimeout(() => {
+        window.postMessage({ type: 'AIAI_MULTI_PENDING', data: multiPending }, TARGET)
       }, 800)
     }
   })

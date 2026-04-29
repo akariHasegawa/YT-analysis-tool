@@ -5,7 +5,7 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      width: 280px;
+      width: 300px;
       padding: 20px;
       background: #0a0c14;
       color: #e2e8f0;
@@ -30,10 +30,18 @@
       font-weight: 700;
       color: white;
     }
-    .logo-text {
-      font-weight: 600;
-      font-size: 14px;
+    .logo-text { font-weight: 600; font-size: 14px; }
+    .plan-badge {
+      margin-left: auto;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .05em;
     }
+    .plan-badge.business { background: linear-gradient(135deg, #f59e0b, #ef4444); color: #fff; }
+    .plan-badge.pro { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; }
+    .plan-badge.free { background: rgba(255,255,255,0.1); color: #94a3b8; }
     .status {
       display: flex;
       align-items: center;
@@ -43,22 +51,9 @@
       margin-bottom: 14px;
       font-size: 12px;
     }
-    .status.connected {
-      background: rgba(34, 197, 94, 0.12);
-      border: 1px solid rgba(34, 197, 94, 0.3);
-      color: #86efac;
-    }
-    .status.disconnected {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.25);
-      color: #fca5a5;
-    }
-    .dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
+    .status.connected { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: #86efac; }
+    .status.disconnected { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: #fca5a5; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
     .dot.green { background: #22c55e; }
     .dot.red { background: #ef4444; }
     .btn {
@@ -72,16 +67,47 @@
       transition: opacity 0.15s;
     }
     .btn:hover { opacity: 0.85; }
-    .btn-primary {
-      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; margin-bottom: 8px; }
+    .btn-secondary { background: rgba(99,102,241,0.12); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.25); }
+    .btn-green { background: linear-gradient(135deg, #10b981, #059669); color: white; margin-bottom: 8px; }
+    .btn-danger { background: rgba(239,68,68,0.12); color: #fca5a5; border: 1px solid rgba(239,68,68,0.2); font-size: 11px; padding: 6px; }
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: .08em;
+      margin: 16px 0 8px;
+      text-transform: uppercase;
+    }
+    .multi-section { border-top: 1px solid rgba(255,255,255,0.06); padding-top: 14px; margin-top: 6px; }
+    .video-list { margin-bottom: 10px; }
+    .video-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 6px;
+      margin-bottom: 4px;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    .video-item-num {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #10b981;
       color: white;
-      margin-bottom: 8px;
+      font-size: 9px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .btn-secondary {
-      background: rgba(99, 102, 241, 0.12);
-      color: #a5b4fc;
-      border: 1px solid rgba(99, 102, 241, 0.25);
-    }
+    .video-item-url { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .empty-list { color: #475569; font-size: 11px; text-align: center; padding: 8px 0; }
     .hint {
       margin-top: 14px;
       padding: 10px 12px;
@@ -98,6 +124,7 @@
   <div class="logo">
     <div class="logo-icon">AI</div>
     <span class="logo-text">AIAI-short</span>
+    <span class="plan-badge free" id="plan-badge">FREE</span>
   </div>
 
   <div id="status" class="status disconnected">
@@ -108,7 +135,17 @@
   <button class="btn btn-primary" id="open-btn">AIAI-shortで連携する</button>
   <button class="btn btn-secondary" id="disconnect-btn" style="display:none">連携を解除する</button>
 
-  <div class="hint">
+  <!-- Businessプラン専用：複数動画リスト -->
+  <div class="multi-section" id="multi-section" style="display:none">
+    <div class="section-title">複数動画リスト（最大5本）</div>
+    <div class="video-list" id="video-list">
+      <div class="empty-list">TikTok・Instagramで「＋ リストに追加」を押してください</div>
+    </div>
+    <button class="btn btn-green" id="analyze-multi-btn" disabled>まとめて分析する（0/5）</button>
+    <button class="btn btn-danger" id="clear-list-btn">リストをクリア</button>
+  </div>
+
+  <div class="hint" id="hint">
     <strong>使い方：</strong><br>
     1. 上のボタンでAIAI-shortを開く<br>
     2. ログイン後「Chrome拡張と連携」をクリック<br>

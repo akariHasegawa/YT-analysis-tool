@@ -19,9 +19,31 @@ import { createSupabaseAdmin, createSupabaseAnon, isSupabaseConfigured } from "@
 import type { ShortsAnalysis } from "@/lib/shorts-analysis"
 import type { MultiVideoAnalysis, MultiVideoSummary } from "@/lib/multi-video-analysis"
 
-const bodySchema = z.object({
-  urls: z.array(z.string().min(1)).min(2).max(5),
-})
+const extensionDataSchema = z.object({
+  views: z.number().nullable().optional(),
+  likes: z.number().nullable().optional(),
+  comments: z.number().nullable().optional(),
+  captions: z.string().optional().default(""),
+  hashtags: z.string().optional().default(""),
+  bgm: z.string().optional().default(""),
+  thumbnailUrl: z.string().optional().default(""),
+}).optional()
+
+const bodySchema = z.union([
+  z.object({
+    urls: z.array(z.string().min(1)).min(2).max(5),
+    videos: z.undefined(),
+  }),
+  z.object({
+    videos: z.array(z.object({
+      url: z.string().min(1),
+      title: z.string().optional().default(""),
+      channelName: z.string().optional().default(""),
+      extensionData: extensionDataSchema,
+    })).min(2).max(5),
+    urls: z.undefined(),
+  }),
+])
 
 // YouTube oEmbed でタイトルを取得
 async function fetchYouTubeTitle(url: string): Promise<string> {
@@ -38,19 +60,32 @@ async function fetchYouTubeTitle(url: string): Promise<string> {
   }
 }
 
+type ExtensionData = {
+  views?: number | null
+  likes?: number | null
+  comments?: number | null
+  captions?: string
+  hashtags?: string
+  bgm?: string
+  thumbnailUrl?: string
+}
+
 // 1本の動画を個別分析（analyze/route.ts と同じロジック）
 async function analyzeSingleVideo(
   url: string,
   apiKey: string,
-  model: string
+  model: string,
+  meta?: { title?: string; channelName?: string; extensionData?: ExtensionData }
 ): Promise<{ analysis: ShortsAnalysis; title: string } | null> {
   const platform = detectPlatform(url)
   if (!platform) return null
 
-  // タイトル取得
-  const title = platform === "youtube" ? await fetchYouTubeTitle(url) : url
+  // タイトル取得（拡張データ優先 → oEmbed → URL）
+  const title = meta?.title || (platform === "youtube" ? await fetchYouTubeTitle(url) : url)
+  const channelName = meta?.channelName || "不明"
+  const ext = meta?.extensionData
 
-  // 字幕取得（YouTubeのみ）
+  // 字幕取得（YouTube: transcript API / TikTok・Instagram: 拡張のcaptions）
   let transcript = ""
   if (platform === "youtube") {
     const vid = extractYouTubeVideoId(url)
@@ -59,20 +94,26 @@ async function analyzeSingleVideo(
         transcript = (await fetchYouTubeTranscriptLines(vid, { durationHintSec: null }))?.trim() ?? ""
       } catch { /* 字幕なし */ }
     }
+  } else if (ext?.captions) {
+    transcript = ext.captions
   }
 
   const isVisualContent = platform === "tiktok" || platform === "instagram"
   const hasTranscript = Boolean(transcript) && !isVisualContent
 
+  const visualMetaBlock = isVisualContent
+    ? `\n--- ビジュアル系コンテンツ情報 ---\nBGM・使用音源: ${ext?.bgm || "不明"}\nハッシュタグ: ${ext?.hashtags || "なし"}\nいいね数: ${ext?.likes ?? "不明"}\nコメント数: ${ext?.comments ?? "不明"}\n`
+    : ""
+
   const systemPrompt = buildUnifiedAnalysisSystemPrompt("research", false, false, isVisualContent)
 
   const userContent = `動画URL: ${url}
 動画タイトル: ${title}
-チャンネル名: 不明
-${hasTranscript
+チャンネル名: ${channelName}
+${visualMetaBlock}${hasTranscript
   ? `\n--- 字幕（秒付き） ---\n${transcript.slice(0, 11000)}`
   : isVisualContent
-  ? "（字幕・音声なし：ビジュアル系コンテンツとして分析）"
+  ? `${transcript ? `\n--- キャプション・説明文 ---\n${transcript.slice(0, 3000)}\n` : ""}（字幕・音声なし：ビジュアル系コンテンツとして分析）`
   : "（字幕・音声なし：ビジュアル系コンテンツとして分析）"}
 上記をもとに、システム指示のとおり analysis / structureTimeline / referenceInsights を含む1つのJSONのみを返してください。`
 
@@ -242,10 +283,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "urls は2〜5件の配列で指定してください" }, { status: 400 })
   }
 
-  const { urls } = parsed.data
-  const invalidUrls = urls.filter((u) => !detectPlatform(u))
+  // urlsまたはvideos形式を統一
+  const videoList = parsed.data.videos
+    ? parsed.data.videos
+    : parsed.data.urls!.map((url) => ({ url, title: "", channelName: "", extensionData: undefined }))
+
+  const invalidUrls = videoList.filter((v) => !detectPlatform(v.url))
   if (invalidUrls.length > 0) {
-    return NextResponse.json({ error: `対応していないURLです: ${invalidUrls[0]}` }, { status: 400 })
+    return NextResponse.json({ error: `対応していないURLです: ${invalidUrls[0].url}` }, { status: 400 })
   }
 
   // 認証チェック（Businessプラン必須）
@@ -298,11 +343,15 @@ export async function POST(req: NextRequest) {
 
   // 各動画を並列で個別分析
   const results = await Promise.all(
-    urls.map((url) => analyzeSingleVideo(url, apiKey, model))
+    videoList.map((v) => analyzeSingleVideo(v.url, apiKey, model, {
+      title: v.title || undefined,
+      channelName: v.channelName || undefined,
+      extensionData: v.extensionData,
+    }))
   )
 
   const validResults = results
-    .map((r, i) => r ? { url: urls[i], title: r.title, analysis: r.analysis } : null)
+    .map((r, i) => r ? { url: videoList[i].url, title: r.title, analysis: r.analysis } : null)
     .filter((r): r is { url: string; title: string; analysis: ShortsAnalysis } => r !== null)
 
   if (validResults.length < 2) {

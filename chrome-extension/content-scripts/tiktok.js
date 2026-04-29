@@ -3,6 +3,7 @@
 
 const AIAI_URL = 'https://yt-analysis-tool-mu.vercel.app'
 const BUTTON_ID = 'aiai-analyze-btn'
+const ADD_BUTTON_ID = 'aiai-add-btn'
 
 // --- DOM scraping helpers ---
 
@@ -157,14 +158,72 @@ async function handleAnalyze() {
   }, 2000)
 }
 
+function createAddButton() {
+  const btn = document.createElement('button')
+  btn.id = ADD_BUTTON_ID
+  btn.textContent = '＋ リストに追加'
+  btn.style.cssText = `
+    position: fixed;
+    bottom: 130px;
+    right: 20px;
+    z-index: 9999;
+    background: rgba(16, 185, 129, 0.9);
+    color: white;
+    border: none;
+    border-radius: 24px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+    transition: opacity 0.2s;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  `
+  btn.addEventListener('mouseenter', () => { btn.style.opacity = '0.85' })
+  btn.addEventListener('mouseleave', () => { btn.style.opacity = '1' })
+  btn.addEventListener('click', handleAddToList)
+  return btn
+}
+
+async function handleAddToList() {
+  const btn = document.getElementById(ADD_BUTTON_ID)
+  if (!btn) return
+  const data = scrapeData()
+  chrome.storage.local.get(['aiai_multi_list'], (result) => {
+    const list = result.aiai_multi_list || []
+    if (list.some((v) => v.url === data.url)) {
+      btn.textContent = '✓ 追加済み'
+      setTimeout(() => { btn.textContent = '＋ リストに追加' }, 2000)
+      return
+    }
+    if (list.length >= 5) {
+      btn.textContent = '上限5本です'
+      setTimeout(() => { btn.textContent = '＋ リストに追加' }, 2000)
+      return
+    }
+    list.push(data)
+    chrome.storage.local.set({ aiai_multi_list: list }, () => {
+      btn.textContent = `✓ 追加（${list.length}/5）`
+      setTimeout(() => { btn.textContent = '＋ リストに追加' }, 2000)
+    })
+  })
+}
+
 function injectButton() {
   if (document.getElementById(BUTTON_ID)) return
   if (!document.body) return
   document.body.appendChild(createButton())
+  // Businessプランなら追加ボタンも表示
+  chrome.storage.local.get(['aiai_plan'], (result) => {
+    if (result.aiai_plan === 'business' && !document.getElementById(ADD_BUTTON_ID)) {
+      document.body.appendChild(createAddButton())
+    }
+  })
 }
 
 function removeButton() {
   document.getElementById(BUTTON_ID)?.remove()
+  document.getElementById(ADD_BUTTON_ID)?.remove()
 }
 
 // --- SPA navigation detection (same as instagram.js) ---

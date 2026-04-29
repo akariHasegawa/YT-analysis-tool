@@ -140,6 +140,36 @@ export default function Home() {
         return
       }
 
+      // 複数動画分析（Businessプラン・拡張から）
+      if (e.data?.type === 'AIAI_MULTI_PENDING') {
+        const videos = e.data.data as Array<{
+          url: string; title: string; channelName: string
+          extensionData?: { views: number | null; likes: number | null; comments: number | null; captions: string; hashtags?: string; bgm?: string; thumbnailUrl?: string }
+        }>
+        if (!videos || videos.length < 2) return
+        setScreen("processing")
+        try {
+          const res = await fetch("/api/analyze-multi", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+            },
+            body: JSON.stringify({ videos }),
+          })
+          const data = await res.json() as { analysis?: MultiVideoAnalysis; error?: string; message?: string }
+          if (!res.ok) throw new Error(data.message || data.error || `エラー: ${res.status}`)
+          if (!data.analysis) throw new Error("分析結果が空でした")
+          setMultiAnalysis(data.analysis)
+          setMultiAnalyzedUrls(videos.map((v) => v.url))
+          setScreen("multi-results")
+        } catch (e) {
+          alert(e instanceof Error ? e.message : "複数動画分析に失敗しました")
+          setScreen("landing")
+        }
+        return
+      }
+
       if (e.data?.type !== 'AIAI_EXTENSION_PENDING') return
 
       const d = e.data.data as {
