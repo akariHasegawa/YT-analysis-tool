@@ -181,7 +181,7 @@ export function MultiUrlInputScreen({ onBack, onResults, initialUrls }: MultiUrl
 
         {/* Submit */}
         <Button
-          onClick={handleSubmit}
+          onClick={() => handleSubmit()}
           disabled={loading || filledUrls.length < 2}
           className="mt-6 w-full gap-2 py-6 text-base font-semibold"
           style={{

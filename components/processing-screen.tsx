@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useLanguage } from "@/lib/language-context"
 import type { VideoInfo } from "@/lib/video-info"
 import { emptyVideoInfo } from "@/lib/video-info"
+import { isLikelyYouTubeUrl } from "@/lib/youtube-video-id"
 
 interface ProcessingScreenProps {
   url: string
@@ -48,11 +49,13 @@ export function ProcessingScreen({ url, onMetadataReady }: ProcessingScreenProps
       let info: VideoInfo = emptyVideoInfo(url)
       let metadataError: string | undefined
 
-      try {
-        info = await fetchVideoMetadata(url, ac.signal)
-      } catch (e) {
-        if (ac.signal.aborted) return
-        metadataError = e instanceof Error ? e.message : "動画メタデータの取得に失敗しました"
+      if (isLikelyYouTubeUrl(url)) {
+        try {
+          info = await fetchVideoMetadata(url, ac.signal)
+        } catch (e) {
+          if (ac.signal.aborted) return
+          metadataError = e instanceof Error ? e.message : "動画メタデータの取得に失敗しました"
+        }
       }
       if (cancelled) return
       onMetadataReady({ videoInfo: info, metadataError })
