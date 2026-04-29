@@ -70,6 +70,9 @@ export function UrlInputScreen({ onAnalyze, onBack, mode = "buzz" }: UrlInputScr
     if (!url.trim()) {
       setError(t("input.error.required"))
       hasError = true
+    } else if (/tiktok\.com|instagram\.com/i.test(url.trim())) {
+      setError("TikTok・Instagram の分析はChrome拡張機能からご利用ください")
+      hasError = true
     } else if (!detectPlatform(url.trim())) {
       setError("YouTube・TikTok・Instagram のURLを入力してください")
       hasError = true
