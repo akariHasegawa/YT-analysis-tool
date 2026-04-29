@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { ArrowLeft, Plus, Trash2, Loader2, Layers } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,14 +12,15 @@ import { useSupabaseAuth } from "@/components/supabase-auth-provider"
 interface MultiUrlInputScreenProps {
   onBack: () => void
   onResults: (analysis: MultiVideoAnalysis, urls: string[]) => void
-  isLoading?: boolean
+  initialUrls?: string[]
 }
 
-export function MultiUrlInputScreen({ onBack, onResults, isLoading = false }: MultiUrlInputScreenProps) {
+export function MultiUrlInputScreen({ onBack, onResults, initialUrls }: MultiUrlInputScreenProps) {
   const { session } = useSupabaseAuth()
-  const [urls, setUrls] = useState<string[]>(["", ""])
+  const [urls, setUrls] = useState<string[]>(initialUrls && initialUrls.length >= 2 ? initialUrls : ["", ""])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | undefined>()
+  const autoSubmittedRef = useRef(false)
 
   const setUrl = (index: number, value: string) => {
     setUrls((prev) => prev.map((u, i) => (i === index ? value : u)))
@@ -45,11 +46,11 @@ export function MultiUrlInputScreen({ onBack, onResults, isLoading = false }: Mu
     return null
   }
 
-  const handleSubmit = async () => {
-    const err = validate()
-    if (err) {
-      setError(err)
-      return
+  const handleSubmit = async (overrideUrls?: string[]) => {
+    const targetUrls = overrideUrls ?? filledUrls.map((u) => u.trim())
+    if (targetUrls.length < 2) { setError("URLを2本以上入力してください"); return }
+    for (const u of targetUrls) {
+      if (!detectPlatform(u)) { setError(`対応していないURLが含まれています:\n${u}`); return }
     }
 
     setLoading(true)
@@ -62,18 +63,12 @@ export function MultiUrlInputScreen({ onBack, onResults, isLoading = false }: Mu
           "Content-Type": "application/json",
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ urls: filledUrls.map((u) => u.trim()) }),
+        body: JSON.stringify({ urls: targetUrls }),
       })
-      const data = (await res.json()) as {
-        analysis?: MultiVideoAnalysis
-        error?: string
-        message?: string
-      }
-      if (!res.ok) {
-        throw new Error(data.message || data.error || `エラー: ${res.status}`)
-      }
+      const data = (await res.json()) as { analysis?: MultiVideoAnalysis; error?: string; message?: string }
+      if (!res.ok) throw new Error(data.message || data.error || `エラー: ${res.status}`)
       if (!data.analysis) throw new Error("分析結果が空でした")
-      onResults(data.analysis, filledUrls.map((u) => u.trim()))
+      onResults(data.analysis, targetUrls)
     } catch (e) {
       setError(e instanceof Error ? e.message : "分析に失敗しました")
     } finally {
@@ -81,7 +76,16 @@ export function MultiUrlInputScreen({ onBack, onResults, isLoading = false }: Mu
     }
   }
 
-  if (isLoading) {
+  // Auto-submit when initialUrls provided (from Chrome extension)
+  useEffect(() => {
+    if (!initialUrls || initialUrls.length < 2 || autoSubmittedRef.current) return
+    if (!session) return  // wait for session
+    autoSubmittedRef.current = true
+    handleSubmit(initialUrls)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialUrls, session])
+
+  if (loading) {
     return (
       <main className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center gap-6 px-4">
         <Loader2 className="h-10 w-10 animate-spin text-[oklch(0.72_0.18_85)]" />

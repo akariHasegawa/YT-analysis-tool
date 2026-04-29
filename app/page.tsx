@@ -77,6 +77,7 @@ export default function Home() {
     channelName: string
     extensionData: { views: number | null; likes: number | null; comments: number | null; captions: string; hashtags?: string; bgm?: string; thumbnailUrl?: string }
   } | null>(null)
+  const [extensionMultiUrls, setExtensionMultiUrls] = useState<string[] | undefined>()
   const [pendingMultiPayload, setPendingMultiPayload] = useState<Array<{
     url: string; title: string; channelName: string
     extensionData?: { views: number | null; likes: number | null; comments: number | null; captions: string; hashtags?: string; bgm?: string; thumbnailUrl?: string }
@@ -249,43 +250,15 @@ export default function Home() {
     setScreen('results')
   }, [authLoading, pendingExtensionPayload, session])
 
-  // Process multi-video payload from extension once auth is ready
+  // When extension sends multi-video list, navigate to multi-input with pre-filled URLs
   useEffect(() => {
-    if (authLoading || !pendingMultiPayload) return
-    const isAnon = Boolean((session?.user as { is_anonymous?: boolean } | undefined)?.is_anonymous)
-    const authed = Boolean(session?.user) && !isAnon
-    if (!authed) {
-      setShowSignupModal(true)
-      return
-    }
-    const videos = pendingMultiPayload
+    if (!pendingMultiPayload) return
+    const urls = pendingMultiPayload.map((v) => v.url).filter(Boolean)
+    if (urls.length < 2) return
     setPendingMultiPayload(null)
-    setAnalysisLoading(true)
+    setExtensionMultiUrls(urls)
     setScreen("multi-input")
-    ;(async () => {
-      try {
-        const res = await fetch("/api/analyze-multi", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session!.access_token}`,
-          },
-          body: JSON.stringify({ videos }),
-        })
-        const data = await res.json() as { analysis?: MultiVideoAnalysis; error?: string; message?: string }
-        if (!res.ok) throw new Error(data.message || data.error || `エラー: ${res.status}`)
-        if (!data.analysis) throw new Error("分析結果が空でした")
-        setMultiAnalysis(data.analysis)
-        setMultiAnalyzedUrls(videos.map((v) => v.url))
-        setAnalysisLoading(false)
-        setScreen("multi-results")
-      } catch (err) {
-        setAnalysisLoading(false)
-        alert(err instanceof Error ? err.message : "複数動画分析に失敗しました")
-        setScreen("landing")
-      }
-    })()
-  }, [authLoading, pendingMultiPayload, session])
+  }, [pendingMultiPayload])
 
   const handleGetStarted = useCallback(() => {
     setScreen("mode-selection")
@@ -497,7 +470,11 @@ export default function Home() {
   }
 
   if (screen === "multi-input") {
-    return <MultiUrlInputScreen onBack={handleBackToModes} onResults={handleMultiResults} isLoading={analysisLoading} />
+    return <MultiUrlInputScreen
+      onBack={handleBackToModes}
+      onResults={(analysis, urls) => { setExtensionMultiUrls(undefined); handleMultiResults(analysis, urls) }}
+      initialUrls={extensionMultiUrls}
+    />
   }
 
   if (screen === "multi-results" && multiAnalysis) {
