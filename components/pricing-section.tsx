@@ -98,6 +98,10 @@ export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: Pri
                 <div className="font-semibold text-white">複数動画からバズの共通パターンを抽出</div>
                 <div className="text-xs text-gray-400 mt-1">最大5本を同時分析。再現性のある勝ちパターンを特定。</div>
               </div>
+              <div className="rounded-lg bg-[rgba(245,158,11,0.08)] border border-[rgba(245,158,11,0.2)] p-3">
+                <div className="font-semibold text-white">Chrome拡張機能で動画を見ながら一気に分析</div>
+                <div className="text-xs text-gray-400 mt-1">TikTok・Instagramを見ながら最大5本をリストに追加して、まとめて分析。</div>
+              </div>
             </div>
 
             <button
