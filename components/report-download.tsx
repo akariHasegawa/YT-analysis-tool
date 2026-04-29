@@ -30,6 +30,15 @@ export function ReportDownload({ analysis, videoInfo, channelHint = "" }: Props)
   const download = async (reportType: ReportType) => {
     if (!session?.access_token) return
     setLoading(reportType)
+
+    // ユーザー操作直後にウィンドウを開く（ポップアップブロック回避）
+    const isHtmlType = reportType === "client" || reportType === "script"
+    const newWin = isHtmlType ? window.open("", "_blank") : null
+    if (newWin) {
+      newWin.document.write(`<html><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9fafb"><p style="color:#6b7280;font-size:16px">レポートを生成中です。しばらくお待ちください...</p></body></html>`)
+      newWin.document.close()
+    }
+
     try {
       const res = await fetch("/api/generate-report", {
         method: "POST",
@@ -46,14 +55,14 @@ export function ReportDownload({ analysis, videoInfo, channelHint = "" }: Props)
           const data = await res.json() as { error?: string }
           errMsg = data.error ?? errMsg
         } catch { /* non-JSON response (e.g. timeout) */ }
+        if (newWin) newWin.close()
         throw new Error(errMsg)
       }
 
       if (res.headers.get("X-Report-Type") === "html") {
-        // クライアント用・台本：新しいタブに直接書き込んでブラウザのprint→PDF
         const htmlText = await res.text()
-        const newWin = window.open("", "_blank")
         if (newWin) {
+          newWin.document.open()
           newWin.document.write(htmlText)
           newWin.document.close()
         }
