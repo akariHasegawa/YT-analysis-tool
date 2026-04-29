@@ -77,6 +77,10 @@ export default function Home() {
     channelName: string
     extensionData: { views: number | null; likes: number | null; comments: number | null; captions: string; hashtags?: string; bgm?: string; thumbnailUrl?: string }
   } | null>(null)
+  const [pendingMultiPayload, setPendingMultiPayload] = useState<Array<{
+    url: string; title: string; channelName: string
+    extensionData?: { views: number | null; likes: number | null; comments: number | null; captions: string; hashtags?: string; bgm?: string; thumbnailUrl?: string }
+  }> | null>(null)
 
   const maxAnalyses = userPlan === "business" ? 100 : userPlan === "pro" ? 30 : 1
 
@@ -140,35 +144,14 @@ export default function Home() {
         return
       }
 
-      // 複数動画分析（Businessプラン・拡張から）
+      // 複数動画分析（Businessプラン・拡張から）- store and wait for auth
       if (e.data?.type === 'AIAI_MULTI_PENDING') {
         const videos = e.data.data as Array<{
           url: string; title: string; channelName: string
           extensionData?: { views: number | null; likes: number | null; comments: number | null; captions: string; hashtags?: string; bgm?: string; thumbnailUrl?: string }
         }>
         if (!videos || videos.length < 2) return
-        setScreen("processing")
-        ;(async () => {
-          try {
-            const res = await fetch("/api/analyze-multi", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-              },
-              body: JSON.stringify({ videos }),
-            })
-            const data = await res.json() as { analysis?: MultiVideoAnalysis; error?: string; message?: string }
-            if (!res.ok) throw new Error(data.message || data.error || `エラー: ${res.status}`)
-            if (!data.analysis) throw new Error("分析結果が空でした")
-            setMultiAnalysis(data.analysis)
-            setMultiAnalyzedUrls(videos.map((v) => v.url))
-            setScreen("multi-results")
-          } catch (err) {
-            alert(err instanceof Error ? err.message : "複数動画分析に失敗しました")
-            setScreen("landing")
-          }
-        })()
+        setPendingMultiPayload(videos)
         return
       }
 
@@ -265,6 +248,41 @@ export default function Home() {
     setAnalysisKey(k => k + 1)
     setScreen('results')
   }, [authLoading, pendingExtensionPayload, session])
+
+  // Process multi-video payload from extension once auth is ready
+  useEffect(() => {
+    if (authLoading || !pendingMultiPayload) return
+    const isAnon = Boolean((session?.user as { is_anonymous?: boolean } | undefined)?.is_anonymous)
+    const authed = Boolean(session?.user) && !isAnon
+    if (!authed) {
+      setShowSignupModal(true)
+      return
+    }
+    const videos = pendingMultiPayload
+    setPendingMultiPayload(null)
+    setScreen("processing")
+    ;(async () => {
+      try {
+        const res = await fetch("/api/analyze-multi", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session!.access_token}`,
+          },
+          body: JSON.stringify({ videos }),
+        })
+        const data = await res.json() as { analysis?: MultiVideoAnalysis; error?: string; message?: string }
+        if (!res.ok) throw new Error(data.message || data.error || `エラー: ${res.status}`)
+        if (!data.analysis) throw new Error("分析結果が空でした")
+        setMultiAnalysis(data.analysis)
+        setMultiAnalyzedUrls(videos.map((v) => v.url))
+        setScreen("multi-results")
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "複数動画分析に失敗しました")
+        setScreen("landing")
+      }
+    })()
+  }, [authLoading, pendingMultiPayload, session])
 
   const handleGetStarted = useCallback(() => {
     setScreen("mode-selection")
