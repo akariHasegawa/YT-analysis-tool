@@ -25,8 +25,30 @@ function parseCount(text) {
   return isNaN(n) ? null : n
 }
 
+function getCurrentReelUrl() {
+  // If already on a specific reel/post page
+  if (/\/(reel|p)\/[A-Za-z0-9_-]+/.test(location.pathname)) return window.location.href
+
+  // Find the currently visible video and its reel link
+  const allVideos = Array.from(document.querySelectorAll('video'))
+  const visibleVideo = allVideos.find(v => {
+    const r = v.getBoundingClientRect()
+    return r.top < window.innerHeight * 0.6 && r.bottom > window.innerHeight * 0.4
+  }) || allVideos[0]
+
+  if (visibleVideo) {
+    const container = visibleVideo.closest('article, [role="presentation"], div[class*="reel"], section')
+    const link = container?.querySelector('a[href*="/reel/"], a[href*="/p/"]')
+    if (link?.href) return link.href
+  }
+
+  // Fallback: first reel link on page
+  const firstReelLink = document.querySelector('a[href*="/reel/"], a[href*="/p/"]')
+  return firstReelLink?.href || window.location.href
+}
+
 function scrapeData() {
-  const url = window.location.href
+  const url = getCurrentReelUrl()
 
   const metaDesc = document.querySelector('meta[name="description"]')?.getAttribute('content') || ''
   const ogDesc = document.querySelector('meta[property="og:description"]')?.getAttribute('content') || ''

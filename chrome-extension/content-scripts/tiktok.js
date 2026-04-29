@@ -39,12 +39,14 @@ function scrapeData() {
   const playingVideo = videos.find(v => !v.paused && v.readyState > 0) || videos[0]
   const container = playingVideo?.closest('[data-e2e="recommend-list-item-container"], [class*="DivItemContainer"], article, section') || null
 
-  // Get video URL from container link, fallback to window.location
-  const videoLink = container?.querySelector('a[href*="/video/"]')
-    || document.querySelector('a[href*="/video/"]')
-  const url = videoLink
-    ? new URL(videoLink.getAttribute('href'), location.origin).href
-    : window.location.href
+  // Get video URL: prefer individual video page URL, then container link only
+  const url = (() => {
+    if (/\/@[^/]+\/video\/\d+/.test(location.pathname)) return window.location.href
+    const containerLink = container?.querySelector('a[href*="/video/"]')
+    if (containerLink) return new URL(containerLink.getAttribute('href'), location.origin).href
+    // Feed page without identifiable container — use timestamp to prevent dedup collision
+    return window.location.href + '#' + Date.now()
+  })()
 
   // Scrape from container first, then page fallback
   const title = getFrom(container, [
