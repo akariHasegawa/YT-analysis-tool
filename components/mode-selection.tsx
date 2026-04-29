@@ -1,7 +1,7 @@
 "use client"
 
 import { useLanguage } from "@/lib/language-context"
-import { Search, Rocket, ArrowLeft, Layers, Lock } from "lucide-react"
+import { Search, Rocket, ArrowLeft, Layers, Lock, Chrome } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export type AnalysisMode = "buzz" | "growth" | "multi"
@@ -9,6 +9,7 @@ export type AnalysisMode = "buzz" | "growth" | "multi"
 interface ModeSelectionProps {
   onSelectMode: (mode: AnalysisMode) => void
   onBack: () => void
+  onExtensionGuide?: () => void
   userPlan?: "free" | "pro" | "business"
   remainingAnalyses?: number
   maxAnalyses?: number
@@ -59,7 +60,7 @@ const PLAN_CONFIG = {
   business: { label: "Business プラン", color: "#f59e0b" },
 }
 
-export function ModeSelection({ onSelectMode, onBack, userPlan = "free", remainingAnalyses, maxAnalyses }: ModeSelectionProps) {
+export function ModeSelection({ onSelectMode, onBack, onExtensionGuide, userPlan = "free", remainingAnalyses, maxAnalyses }: ModeSelectionProps) {
   const { t } = useLanguage()
   const isPaid = userPlan === "pro" || userPlan === "business"
   const isBusiness = userPlan === "business"
@@ -281,6 +282,18 @@ export function ModeSelection({ onSelectMode, onBack, userPlan = "free", remaini
             )}
           </button>
         </div>
+
+        {/* Extension guide button (Pro/Business only) */}
+        {isPaid && onExtensionGuide && (
+          <button
+            type="button"
+            onClick={onExtensionGuide}
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-[oklch(0.45_0.1_270_/_0.25)] py-3.5 text-sm font-medium text-muted-foreground transition-colors hover:border-[oklch(0.55_0.15_270_/_0.4)] hover:text-foreground"
+          >
+            <Chrome className="h-4 w-4" />
+            Chrome拡張機能のご案内（TikTok・Instagram対応）
+          </button>
+        )}
       </div>
     </main>
   )

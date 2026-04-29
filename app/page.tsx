@@ -11,6 +11,7 @@ import { ProcessingScreen } from "@/components/processing-screen"
 import { ResultsScreen } from "@/components/results-screen"
 import { MultiUrlInputScreen } from "@/components/multi-url-input-screen"
 import { MultiResultsScreen } from "@/components/multi-results-screen"
+import { ExtensionGuideScreen } from "@/components/extension-guide-screen"
 import { SignupModal } from "@/components/signup-modal"
 import type { ShortsAnalysis } from "@/lib/shorts-analysis"
 import type { ReferenceInsightsPayload } from "@/lib/reference-insights"
@@ -20,7 +21,7 @@ import type { MultiVideoAnalysis } from "@/lib/multi-video-analysis"
 import { useLanguage } from "@/lib/language-context"
 import { useSupabaseAuth } from "@/components/supabase-auth-provider"
 
-type Screen = "landing" | "mode-selection" | "input" | "processing" | "results" | "multi-input" | "multi-results"
+type Screen = "landing" | "mode-selection" | "input" | "processing" | "results" | "multi-input" | "multi-results" | "extension-guide"
 type PaidPlan = "pro" | "business"
 
 export default function Home() {
@@ -461,8 +462,20 @@ export default function Home() {
     )
   }
 
+  if (screen === "extension-guide") {
+    const plan = userPlan === "business" || userPlan === "pro" ? userPlan : "pro"
+    return <ExtensionGuideScreen onBack={handleBackToModes} userPlan={plan} />
+  }
+
   if (screen === "mode-selection") {
-    return <ModeSelection onSelectMode={handleSelectMode} onBack={handleBackToLanding} userPlan={userPlan} remainingAnalyses={remainingAnalyses} maxAnalyses={maxAnalyses} />
+    return <ModeSelection
+      onSelectMode={handleSelectMode}
+      onBack={handleBackToLanding}
+      onExtensionGuide={() => setScreen("extension-guide")}
+      userPlan={userPlan}
+      remainingAnalyses={remainingAnalyses}
+      maxAnalyses={maxAnalyses}
+    />
   }
 
   if (screen === "input") {

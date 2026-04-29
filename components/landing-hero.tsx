@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Chrome, Smartphone } from 'lucide-react'
 
 interface LandingHeroProps {
   onGetStarted: () => void
@@ -62,8 +62,18 @@ export function LandingHero({ onGetStarted }: LandingHeroProps) {
       {/* CTA Note */}
       <p className="mt-3 text-xs text-white sm:text-sm">初回1回無料</p>
 
+      {/* Extension teaser */}
+      <div className="mt-10 flex items-center gap-3 rounded-2xl border border-[rgba(99,102,241,0.2)] bg-[rgba(99,102,241,0.05)] px-5 py-3">
+        <Chrome className="h-5 w-5 shrink-0 text-[#6366f1]" />
+        <div className="text-left">
+          <p className="text-sm font-semibold text-white">Chrome拡張機能でTikTok・Instagramも対応</p>
+          <p className="text-xs text-gray-400">Pro / Businessプランで利用可能</p>
+        </div>
+        <Smartphone className="h-5 w-5 shrink-0 text-gray-500 ml-auto" />
+      </div>
+
       {/* Mode Badges */}
-      <div className="mt-12 flex gap-0 rounded-lg overflow-hidden">
+      <div className="mt-8 flex gap-0 rounded-lg overflow-hidden">
         {/* Research Mode */}
         <div className="flex-1 border border-r-0 border-[#6366f1] rounded-l-lg bg-transparent px-4 py-4 sm:px-8 sm:py-5">
           <div className="mb-2 text-xs font-bold uppercase tracking-wider text-[#6366f1]">Research</div>
