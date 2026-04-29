@@ -103,10 +103,6 @@ export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: Pri
                 <div className="font-semibold text-white">内部用・クライアント提出用を自動で出し分け</div>
                 <div className="text-xs text-gray-400 mt-1">ボタン一つでプロ品質のレポートを即生成。</div>
               </div>
-              <div className="rounded-lg bg-[rgba(99,102,241,0.1)] p-3">
-                <div className="font-semibold text-white">動画制作まで進められるナレーション生成</div>
-                <div className="text-xs text-gray-400 mt-1">台本をそのまま高品質な日本語音声に変換。</div>
-              </div>
             </div>
 
             <button
