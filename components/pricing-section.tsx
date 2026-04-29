@@ -63,10 +63,9 @@ export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: Pri
             <div className="mb-8 space-y-2">
               <FeatureItem text="バズ分析" />
               <FeatureItem text="バズり動画 vs 自分の動画の比較分析" />
-              <FeatureItem text="比較結果から台本・動画生成プロンプトを生成" />
               <FeatureItem text="秒単位の改善提案" />
               <FeatureItem text="次の動画アイデア4つ" />
-              <FeatureItem text="台本・動画生成プロンプト（4パターン）" />
+              <FeatureItem text="比較結果から台本・動画生成プロンプトを生成（4パターン）" />
             </div>
 
             <button
@@ -98,10 +97,6 @@ export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: Pri
               <div className="rounded-lg bg-[rgba(99,102,241,0.1)] p-3">
                 <div className="font-semibold text-white">複数動画からバズの共通パターンを抽出</div>
                 <div className="text-xs text-gray-400 mt-1">最大5本を同時分析。再現性のある勝ちパターンを特定。</div>
-              </div>
-              <div className="rounded-lg bg-[rgba(99,102,241,0.1)] p-3">
-                <div className="font-semibold text-white">内部用・クライアント提出用を自動で出し分け</div>
-                <div className="text-xs text-gray-400 mt-1">ボタン一つでプロ品質のレポートを即生成。</div>
               </div>
             </div>
 
