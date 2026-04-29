@@ -50,12 +50,13 @@ export function ReportDownload({ analysis, videoInfo, channelHint = "" }: Props)
       }
 
       if (res.headers.get("X-Report-Type") === "html") {
-        // クライアント用・台本：新しいタブで開いてブラウザのprint→PDF
+        // クライアント用・台本：新しいタブに直接書き込んでブラウザのprint→PDF
         const htmlText = await res.text()
-        const blob = new Blob([htmlText], { type: "text/html" })
-        const url = URL.createObjectURL(blob)
-        window.open(url, "_blank")
-        setTimeout(() => URL.revokeObjectURL(url), 10000)
+        const newWin = window.open("", "_blank")
+        if (newWin) {
+          newWin.document.write(htmlText)
+          newWin.document.close()
+        }
       } else {
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)
@@ -161,7 +162,7 @@ export function ReportDownload({ analysis, videoInfo, channelHint = "" }: Props)
           </div>
 
           <p className="text-[11px] text-muted-foreground">
-            ※ 内部用：約30秒。クライアント用・台本：AIがレポートを作成するため2〜3分かかります。生成中はリロードしないでください。
+            ※ 内部用：約30秒でPDFダウンロード。クライアント用・台本：AIが作成するため1〜2分かかります。完了すると新しいタブが開くので「🖨 PDFで保存」を押してください。生成中はリロードしないでください。
           </p>
         </div>
       )}
