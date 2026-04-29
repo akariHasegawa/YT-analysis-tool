@@ -59,8 +59,10 @@ function checkAndForward() {
   })
 }
 
-// On page load
-setTimeout(checkAndForward, 600)
+// If extension reloaded while page is already open, check immediately
+if (document.readyState === 'complete') {
+  setTimeout(checkAndForward, 300)
+}
 
 // When tab is focused (background.js focuses existing tab)
 document.addEventListener('visibilitychange', () => {
@@ -69,7 +71,8 @@ document.addEventListener('visibilitychange', () => {
   }
 })
 
-// Page signals it's ready
+// Page signals it's ready — primary trigger for new tab loads
+// page.tsx sets up its message listener BEFORE posting this, so timing is safe
 window.addEventListener('message', (e) => {
   if (e.data?.type === 'AIAI_PAGE_READY') checkAndForward()
 })

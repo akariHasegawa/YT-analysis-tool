@@ -246,3 +246,10 @@ history.replaceState = function (...args) {
 window.addEventListener('popstate', onNavigate)
 
 setTimeout(injectButton, 1500)
+
+// Watch for plan changes (e.g., popup fetches /api/me and updates aiai_plan)
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.aiai_plan?.newValue === 'business' && !document.getElementById(ADD_BUTTON_ID)) {
+    document.body?.appendChild(createAddButton())
+  }
+})
