@@ -48,8 +48,19 @@ function renderVideoList(list) {
     return `<div class="video-item">
       <div class="video-item-num">${i + 1}</div>
       <div class="video-item-url" title="${v.url}">${short}</div>
+      <button class="video-item-del" data-index="${i}" title="削除">×</button>
     </div>`
   }).join('')
+
+  videoListEl.querySelectorAll('.video-item-del').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-index'), 10)
+      chrome.storage.local.get(['aiai_multi_list'], (r) => {
+        const updated = (r.aiai_multi_list || []).filter((_, i) => i !== idx)
+        chrome.storage.local.set({ aiai_multi_list: updated }, () => renderVideoList(updated))
+      })
+    })
+  })
   analyzeMultiBtn.disabled = list.length < 2
   analyzeMultiBtn.textContent = `まとめて分析する（${list.length}/5）`
 }
