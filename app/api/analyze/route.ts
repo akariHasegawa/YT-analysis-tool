@@ -278,6 +278,45 @@ import { NextRequest, NextResponse } from "next/server"
     const competitorUrlTrimmed = typeof competitorUrl === "string" ? competitorUrl.trim() : ""
     const hasCompetitorUrl = competitorUrlTrimmed.length > 0
 
+    // キャッシュチェック（競合URL指定時はスキップ）
+    const cacheAdmin = admin ?? (isSupabaseConfigured() ? createSupabaseAdmin() : null)
+    if (!hasCompetitorUrl && cacheAdmin) {
+      const { data: cached } = await cacheAdmin
+        .from("video_analysis_cache")
+        .select("analysis, reference_insights")
+        .eq("url", url)
+        .gt("updated_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+        .maybeSingle()
+      if (cached) {
+        const cachedBody: { analysis: unknown; referenceInsights: unknown; usage?: unknown } = {
+          analysis: cached.analysis,
+          referenceInsights: cached.reference_insights,
+        }
+        if (!isGuest && admin && authUser) {
+          try {
+            await incrementUserAnalysisCounts(admin, authUser.id)
+          } catch { /* ignore */ }
+          const { data: usageRow } = await admin
+            .from("users")
+            .select("plan, analysis_count_total, analysis_count_month, usage_month")
+            .eq("id", authUser.id)
+            .maybeSingle()
+          if (usageRow) cachedBody.usage = usageRow
+        }
+        const cachedResponse = NextResponse.json(cachedBody)
+        if (isGuest && !limitDisabled) {
+          cachedResponse.cookies.set(GUEST_ANALYSIS_COOKIE, "1", {
+            maxAge: 60 * 60 * 24 * 400,
+            path: "/",
+            sameSite: "lax",
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+          })
+        }
+        return cachedResponse
+      }
+    }
+
     // ★ 字幕を先に取得してメイン分析にも使う
     // YouTube: APIで取得 / TikTok・Instagram: Chrome拡張のcaptionsを使用
     let transcript = ""
@@ -373,7 +412,7 @@ ${hasTranscript
         apiKey,
         {
           model,
-          temperature: 0.6,
+          temperature: 0,
           response_format: { type: "json_object" },
           messages: [{ role: "system", content: systemPrompt }, userMessage],
         },
@@ -540,6 +579,14 @@ ${hasTranscript
       } finally {
         clearTimeout(timeoutId)
       }
+    }
+
+    // キャッシュ保存（競合URL指定時はスキップ）
+    if (!hasCompetitorUrl && cacheAdmin) {
+      cacheAdmin
+        .from("video_analysis_cache")
+        .upsert({ url, analysis, reference_insights: referenceInsights, updated_at: new Date().toISOString() }, { onConflict: "url" })
+        .then(({ error }) => { if (error) console.warn("[analyze] cache upsert failed", error) })
     }
 
     type UsagePayload = Pick<UserUsageRow, "plan" | "analysis_count_total" | "analysis_count_month" | "usage_month">
