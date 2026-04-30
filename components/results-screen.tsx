@@ -195,13 +195,18 @@ export function ResultsScreen({
       ...prev,
       [i]: { ...getPromptState(i), loading: promptType, open: null, scriptSettingsOpen: false },
     }))
+
+    const apiPromptType = promptType === "video"
+      ? (isShortFormPlatform ? "video-short" : "video-long")
+      : "script"
+
     try {
       const res = await fetch("/api/generate-prompt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           idea: analysis.nextVideoIdeas[i],
-          promptType,
+          promptType: apiPromptType,
           castCount: state.castCount,
           dialogueStyle: state.dialogueStyle,
           context: {
