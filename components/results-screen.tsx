@@ -235,11 +235,14 @@ export function ResultsScreen({
           copied: false,
         },
       }))
-    } catch {
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "生成失敗"
+      console.error('[generatePrompt] error:', msg)
       setPromptStates((prev) => ({
         ...prev,
         [i]: { ...getPromptState(i), loading: null },
       }))
+      alert(`プロンプト生成エラー: ${msg}`)
     }
   }
 
