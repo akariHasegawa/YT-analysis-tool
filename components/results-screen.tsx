@@ -242,7 +242,6 @@ export function ResultsScreen({
         ...prev,
         [i]: { ...getPromptState(i), loading: null },
       }))
-      alert(`プロンプト生成エラー: ${msg}`)
     }
   }
 

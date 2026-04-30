@@ -34,17 +34,25 @@ const bodySchema = z.object({
 const SCRIPT_FIELDS_PROMPT = `あなたはYouTubeショート動画の企画専門家です。
 動画アイデアとコンテキストをもとに、以下のJSONキーをすべて埋めて返してください。
 
+【最重要ルール】
+コンテキストに含まれる「被写体タイプ」「映像アクション」「共通フックパターン」「感情設計」を最優先で参照し、
+分析した動画のジャンル・トーン（コミカル・バイラル・アクシデント系・教育系・感動系など）を正確に反映させること。
+例：川に落ちる・ドッキリ系の動画 → コミカル・リアクション系の台本を生成する
+例：ライフハック・解説動画 → 教育・Tips系の台本を生成する
+絶対にコンテキストと無関係な「自己成長チャレンジ」などの汎用テーマにデフォルトしないこと。
+
 {
-  "target": "ターゲット視聴者（年齢・属性・悩みを具体的に1〜2文）",
-  "hook": "冒頭0〜3秒の具体的な一言・数字・問いかけ。セリフ形式で書くこと（例：「手取り18万で毎月3万貯めてる」という一言から始める）",
-  "scene1": "本編 展開1（何を・どう見せるか具体的に）",
+  "target": "ターゲット視聴者（年齢・属性・具体的な関心を1〜2文）",
+  "hook": "冒頭0〜3秒の具体的な一言・数字・問いかけ。セリフ形式で書くこと。分析動画のジャンルに合わせること",
+  "scene1": "本編 展開1（何を・どう見せるか具体的に。分析動画のトーンを維持）",
   "scene2": "本編 展開2（具体的に）",
   "scene3": "本編 展開3（具体的に）",
-  "cta": "締め・CTAの呼びかけ文（コメント・保存・フォローなど）",
-  "tone": "話し方・テンポ・口調（具体的に）"
+  "cta": "締め・CTAの呼びかけ（コメント・保存・フォローなど。ジャンルに合った言い方で）",
+  "tone": "話し方・テンポ・口調（コミカルなら軽快に、シリアスなら落ち着いた口調など、ジャンルを具体的に）"
 }
 
 禁止：「視聴者が共感できる」「感情に訴える」などの抽象表現のみで終わること。
+禁止：コンテキストと無関係なジャンル・テーマで出力すること。
 JSONのみ返す。`
 
 function buildVideoSystemPrompt(format: "short" | "long"): string {
@@ -55,6 +63,13 @@ function buildVideoSystemPrompt(format: "short" | "long"): string {
   return `あなたはSeedance・Sora等の動画生成AIに渡す構造化プロンプトの専門家です。
 渡された「次に作るべき動画アイデア」と「分析コンテキスト」をもとに、
 以下の2部構成で出力してください。
+
+【最重要ルール】
+コンテキストの「被写体タイプ」「映像アクション」「感情設計」「フックパターン」を必ず参照し、
+分析した動画のジャンル・トーン・映像スタイルをプロンプトに正確に反映させること。
+例：コミカル・アクシデント系 → Subject/Action/Toneに「予期せぬ出来事」「リアクション」「ユーモラス」を反映
+例：教育系 → 落ち着いた解説スタイルで生成
+汎用的・無関係な内容にデフォルトしないこと。
 
 ${constraints}
 
@@ -155,16 +170,19 @@ export async function POST(req: NextRequest) {
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini"
 
   const mc = context.multiContext
-  let userContent = `動画アイデア: ${idea}
+  let userContent = `【分析した動画の特性（最優先で反映すること）】
+${context.subjectType ? `被写体タイプ: ${context.subjectType}` : ""}
+${context.actionType ? `映像アクション: ${context.actionType}` : ""}
+${context.hook ? `フックパターン: ${context.hook}` : ""}
+${context.emotion ? `感情設計・トーン: ${context.emotion}` : ""}
+
+【次に作る動画アイデア】
+${idea}
 ${context.channelName ? `チャンネル名: ${context.channelName}` : ""}
-${context.hook ? `共通フックパターン: ${context.hook}` : ""}
-${context.emotion ? `共通感情設計: ${context.emotion}` : ""}
 ${mc?.commonStructure ? `共通構成パターン: ${mc.commonStructure}` : ""}
 ${mc?.commonCTAPatterns?.length ? `共通CTA: ${mc.commonCTAPatterns.join(" / ")}` : ""}
 ${mc?.keySuccessFactors?.length ? `成功要因:\n${mc.keySuccessFactors.map((s, i) => `${i + 1}. ${s}`).join("\n")}` : ""}
-${context.improvementIdeas?.length ? `参考ポイント:\n${context.improvementIdeas.slice(0, 5).map((s, i) => `${i + 1}. ${s}`).join("\n")}` : ""}
-${context.subjectType ? `被写体タイプ: ${context.subjectType}` : ""}
-${context.actionType ? `映像アクション: ${context.actionType}` : ""}`
+${context.improvementIdeas?.length ? `参考ポイント:\n${context.improvementIdeas.slice(0, 5).map((s, i) => `${i + 1}. ${s}`).join("\n")}` : ""}`
 
   const cc = context.competitorComparison
   if (cc) {
