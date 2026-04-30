@@ -22,6 +22,7 @@ const bodySchema = z.object({
     hook: z.string().optional(),
     emotion: z.string().optional(),
     competitorComparison: competitorComparisonContextSchema,
+    topComments: z.array(z.string()).optional(),
     multiContext: z.object({
       commonStructure: z.string().optional(),
       commonCTAPatterns: z.array(z.string()).optional(),
@@ -175,14 +176,15 @@ ${context.subjectType ? `被写体タイプ: ${context.subjectType}` : ""}
 ${context.actionType ? `映像アクション: ${context.actionType}` : ""}
 ${context.hook ? `フックパターン: ${context.hook}` : ""}
 ${context.emotion ? `感情設計・トーン: ${context.emotion}` : ""}
+${context.topComments?.length ? `視聴者コメント（ジャンル判定に使用）:\n${context.topComments.map((c, idx) => `${idx + 1}. ${c}`).join("\n")}` : ""}
 
 【次に作る動画アイデア】
 ${idea}
 ${context.channelName ? `チャンネル名: ${context.channelName}` : ""}
 ${mc?.commonStructure ? `共通構成パターン: ${mc.commonStructure}` : ""}
 ${mc?.commonCTAPatterns?.length ? `共通CTA: ${mc.commonCTAPatterns.join(" / ")}` : ""}
-${mc?.keySuccessFactors?.length ? `成功要因:\n${mc.keySuccessFactors.map((s, i) => `${i + 1}. ${s}`).join("\n")}` : ""}
-${context.improvementIdeas?.length ? `参考ポイント:\n${context.improvementIdeas.slice(0, 5).map((s, i) => `${i + 1}. ${s}`).join("\n")}` : ""}`
+${mc?.keySuccessFactors?.length ? `成功要因:\n${mc.keySuccessFactors.map((s, idx) => `${idx + 1}. ${s}`).join("\n")}` : ""}
+${context.improvementIdeas?.length ? `参考ポイント:\n${context.improvementIdeas.slice(0, 5).map((s, idx) => `${idx + 1}. ${s}`).join("\n")}` : ""}`
 
   const cc = context.competitorComparison
   if (cc) {

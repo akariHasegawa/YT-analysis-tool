@@ -60,6 +60,7 @@ interface ResultsScreenProps {
   videoUrl?: string
   hashtags?: string
   bgm?: string
+  topComments?: string[]
 }
 
 type AnalysisCardKey = "hook" | "emotion" | "cta" | "structure" | "retention"
@@ -126,10 +127,12 @@ export function ResultsScreen({
   videoUrl = "",
   hashtags = "",
   bgm = "",
+  topComments = [],
 }: ResultsScreenProps) {
   const { t, language } = useLanguage()
   const locale = language === "ja" ? "ja-JP" : "en-US"
   const isShortFormPlatform = /tiktok\.com|instagram\.com/.test(videoUrl)
+  const hasVideoContext = !isShortFormPlatform || topComments.length > 0
   const hashtagList = hashtags ? hashtags.split(/\s+/).filter(Boolean).slice(0, 8) : []
   
   // Upgrade modal state
@@ -216,6 +219,7 @@ export function ResultsScreen({
             subjectType: analysis.subjectType,
             actionType: analysis.actionType,
             improvementIdeas: analysis.improvementIdeas,
+            topComments: topComments.length > 0 ? topComments : undefined,
             ...(analysis.competitorComparison
               ? { competitorComparison: analysis.competitorComparison }
               : {}),
@@ -589,38 +593,44 @@ export function ResultsScreen({
                               <span className="text-sm leading-relaxed text-foreground/95">{text}</span>
                             </div>
                             {/* ボタン */}
-                            <div className="flex gap-2 px-4 pb-4">
-                              <button
-                                type="button"
-                                onClick={() => toggleScriptSettings(i)}
-                                disabled={ps.loading !== null}
-                                className={cn(
-                                  "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
-                                  ps.scriptSettingsOpen || ps.open === "script"
-                                    ? "bg-[oklch(0.45_0.18_250)] text-white"
-                                    : "bg-[oklch(0.25_0.08_270_/_0.6)] text-[oklch(0.78_0.12_260)] hover:bg-[oklch(0.35_0.12_260_/_0.7)]",
-                                  ps.loading === "script" && "opacity-60 cursor-not-allowed"
-                                )}
-                              >
-                                <FileText className="h-3.5 w-3.5" />
-                                {ps.loading === "script" ? "生成中..." : "台本プロンプト"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => generatePrompt(i, "video")}
-                                disabled={ps.loading !== null}
-                                className={cn(
-                                  "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
-                                  ps.open === "video"
-                                    ? "bg-[oklch(0.45_0.18_300)] text-white"
-                                    : "bg-[oklch(0.25_0.08_270_/_0.6)] text-[oklch(0.78_0.12_260)] hover:bg-[oklch(0.35_0.12_260_/_0.7)]",
-                                  ps.loading === "video" && "opacity-60 cursor-not-allowed"
-                                )}
-                              >
-                                <Video className="h-3.5 w-3.5" />
-                                {ps.loading === "video" ? "生成中..." : "動画プロンプト"}
-                              </button>
-                            </div>
+                            {hasVideoContext ? (
+                              <div className="flex gap-2 px-4 pb-4">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleScriptSettings(i)}
+                                  disabled={ps.loading !== null}
+                                  className={cn(
+                                    "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
+                                    ps.scriptSettingsOpen || ps.open === "script"
+                                      ? "bg-[oklch(0.45_0.18_250)] text-white"
+                                      : "bg-[oklch(0.25_0.08_270_/_0.6)] text-[oklch(0.78_0.12_260)] hover:bg-[oklch(0.35_0.12_260_/_0.7)]",
+                                    ps.loading === "script" && "opacity-60 cursor-not-allowed"
+                                  )}
+                                >
+                                  <FileText className="h-3.5 w-3.5" />
+                                  {ps.loading === "script" ? "生成中..." : "台本プロンプト"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => generatePrompt(i, "video")}
+                                  disabled={ps.loading !== null}
+                                  className={cn(
+                                    "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
+                                    ps.open === "video"
+                                      ? "bg-[oklch(0.45_0.18_300)] text-white"
+                                      : "bg-[oklch(0.25_0.08_270_/_0.6)] text-[oklch(0.78_0.12_260)] hover:bg-[oklch(0.35_0.12_260_/_0.7)]",
+                                    ps.loading === "video" && "opacity-60 cursor-not-allowed"
+                                  )}
+                                >
+                                  <Video className="h-3.5 w-3.5" />
+                                  {ps.loading === "video" ? "生成中..." : "動画プロンプト"}
+                                </button>
+                              </div>
+                            ) : (
+                              <p className="px-4 pb-4 text-xs text-muted-foreground/60">
+                                今回は動画の内容を十分に読み取れなかったため、プロンプト生成をスキップしました。
+                              </p>
+                            )}
 
                             {/* 台本設定アコーディオン */}
                             {ps.scriptSettingsOpen && (

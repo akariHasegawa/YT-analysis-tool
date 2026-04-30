@@ -195,6 +195,7 @@ import { NextRequest, NextResponse } from "next/server"
         hashtags: z.string().optional().default(""),
         bgm: z.string().optional().default(""),
         thumbnailUrl: z.string().optional().default(""),
+        topComments: z.array(z.string()).optional().default([]),
       })
       .optional(),
   })
@@ -364,13 +365,18 @@ import { NextRequest, NextResponse } from "next/server"
     const isVisualContent = platform === "tiktok" || platform === "instagram"
     const bgm = extensionData?.bgm || ""
     const hashtags = extensionData?.hashtags || ""
+    const topComments = extensionData?.topComments ?? []
 
     const systemPrompt = buildUnifiedAnalysisSystemPrompt(
       mode, hasCompetitorUrl, Boolean(thumbForOpenAi), isVisualContent
     )
 
+    const commentsBlock = topComments.length > 0
+      ? `視聴者コメント（上位）:\n${topComments.map((c, i) => `${i + 1}. ${c}`).join("\n")}\n`
+      : ""
+
     const visualMetaBlock = isVisualContent
-      ? `\n--- ビジュアル系コンテンツ情報 ---\nBGM・使用音源: ${bgm || "不明"}\nハッシュタグ: ${hashtags || "なし"}\nプラットフォーム: ${getPlatformSheetLabel(url)}\n`
+      ? `\n--- ビジュアル系コンテンツ情報 ---\nBGM・使用音源: ${bgm || "不明"}\nハッシュタグ: ${hashtags || "なし"}\nプラットフォーム: ${getPlatformSheetLabel(url)}\n${commentsBlock}`
       : ""
 
     const hasTranscript = Boolean(transcript) && !isVisualContent

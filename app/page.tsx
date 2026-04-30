@@ -71,17 +71,18 @@ export default function Home() {
     hashtags?: string
     bgm?: string
     thumbnailUrl?: string
+    topComments?: string[]
   } | null>(null)
   const [pendingExtensionPayload, setPendingExtensionPayload] = useState<{
     url: string
     title: string
     channelName: string
-    extensionData: { views: number | null; likes: number | null; comments: number | null; captions: string; hashtags?: string; bgm?: string; thumbnailUrl?: string }
+    extensionData: { views: number | null; likes: number | null; comments: number | null; captions: string; hashtags?: string; bgm?: string; thumbnailUrl?: string; topComments?: string[] }
   } | null>(null)
   const [extensionMultiUrls, setExtensionMultiUrls] = useState<string[] | undefined>()
   const [pendingMultiPayload, setPendingMultiPayload] = useState<Array<{
     url: string; title: string; channelName: string
-    extensionData?: { views: number | null; likes: number | null; comments: number | null; captions: string; hashtags?: string; bgm?: string; thumbnailUrl?: string }
+    extensionData?: { views: number | null; likes: number | null; comments: number | null; captions: string; hashtags?: string; bgm?: string; thumbnailUrl?: string; topComments?: string[] }
   }> | null>(null)
 
   const maxAnalyses = userPlan === "business" ? 100 : userPlan === "pro" ? 30 : 1
@@ -150,7 +151,7 @@ export default function Home() {
       if (e.data?.type === 'AIAI_MULTI_PENDING') {
         const videos = e.data.data as Array<{
           url: string; title: string; channelName: string
-          extensionData?: { views: number | null; likes: number | null; comments: number | null; captions: string; hashtags?: string; bgm?: string; thumbnailUrl?: string }
+          extensionData?: { views: number | null; likes: number | null; comments: number | null; captions: string; hashtags?: string; bgm?: string; thumbnailUrl?: string; topComments?: string[] }
         }>
         if (!videos || videos.length < 2) return
         setPendingMultiPayload(videos)
@@ -516,6 +517,7 @@ export default function Home() {
         videoUrl={analyzedUrl}
         hashtags={pendingExtensionData?.hashtags ?? ""}
         bgm={pendingExtensionData?.bgm ?? ""}
+        topComments={pendingExtensionData?.topComments ?? []}
       />
       <SignupModal
         isOpen={showSignupModal}

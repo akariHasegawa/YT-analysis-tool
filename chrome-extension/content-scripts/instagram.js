@@ -83,6 +83,15 @@ function scrapeData() {
   const likesText = getText(['section span[class*="html-span"]', 'a[href$="/liked_by/"] span'])
   const viewsText = getText(['span[class*="videoPlaybackPosition"]', 'span[class*="views"]'])
 
+  const topComments = Array.from(document.querySelectorAll([
+    'ul[class*="Mr508"] li span._aacl',
+    'div[class*="comment"] span._aacl',
+    'span[class*="html-span"][dir="auto"]',
+  ].join(', ')))
+    .map(el => el.textContent?.trim())
+    .filter(t => t && t.length > 2 && !t.startsWith('#'))
+    .slice(0, 10)
+
   return {
     url,
     title: caption,
@@ -95,6 +104,7 @@ function scrapeData() {
       hashtags,
       bgm,
       thumbnailUrl,
+      topComments,
     },
   }
 }

@@ -94,6 +94,16 @@ function scrapeData() {
 
   const captions = title
 
+  const topComments = Array.from(document.querySelectorAll([
+    '[data-e2e="comment-level-1"] [data-e2e="comment-text"]',
+    '[data-e2e="comment-level-1"] p',
+    '[class*="CommentText"]',
+    '[class*="comment-text"]',
+  ].join(', ')))
+    .map(el => el.textContent?.trim())
+    .filter(Boolean)
+    .slice(0, 10)
+
   return {
     url,
     title,
@@ -106,6 +116,7 @@ function scrapeData() {
       hashtags,
       bgm,
       thumbnailUrl: '',
+      topComments,
     },
   }
 }
