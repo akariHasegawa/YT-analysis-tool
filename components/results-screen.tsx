@@ -132,7 +132,7 @@ export function ResultsScreen({
   const { t, language } = useLanguage()
   const locale = language === "ja" ? "ja-JP" : "en-US"
   const isShortFormPlatform = /tiktok\.com|instagram\.com/.test(videoUrl)
-  const hasVideoContext = !isShortFormPlatform || topComments.length > 0
+  const hasVideoContext = !isShortFormPlatform || topComments.length > 0 || Boolean(analysis?.subjectType) || Boolean(analysis?.actionType)
   const hashtagList = hashtags ? hashtags.split(/\s+/).filter(Boolean).slice(0, 8) : []
   
   // Upgrade modal state
