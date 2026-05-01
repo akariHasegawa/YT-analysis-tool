@@ -165,6 +165,7 @@ export function ResultsScreen({
     scriptSettingsOpen: boolean
     castCount: CastCount
     dialogueStyle: string
+    error: string | null
   }
   const [promptStates, setPromptStates] = useState<Record<number, PromptState>>({})
 
@@ -175,6 +176,7 @@ export function ResultsScreen({
       videoPrompt: null,
       open: null,
       copied: false,
+      error: null,
       scriptSettingsOpen: false,
       castCount: "1",
       dialogueStyle: "",
@@ -250,7 +252,7 @@ export function ResultsScreen({
       console.error('[generatePrompt] error:', msg)
       setPromptStates((prev) => ({
         ...prev,
-        [i]: { ...getPromptState(i), loading: null },
+        [i]: { ...getPromptState(i), loading: null, error: msg },
       }))
     }
   }
@@ -636,6 +638,9 @@ export function ResultsScreen({
                               <p className="px-4 pb-4 text-xs text-muted-foreground/60">
                                 今回は動画の内容を十分に読み取れなかったため、プロンプト生成をスキップしました。
                               </p>
+                            )}
+                            {ps.error && (
+                              <p className="px-4 pb-3 text-xs text-red-400">エラー: {ps.error}</p>
                             )}
 
                             {/* 台本設定アコーディオン */}
