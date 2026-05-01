@@ -136,8 +136,8 @@ export function ResultsScreen({
   const { t, language } = useLanguage()
   const locale = language === "ja" ? "ja-JP" : "en-US"
   const isShortFormPlatform = /tiktok\.com|instagram\.com/.test(videoUrl)
-  // YouTube: 常にOK / TikTok・Instagram: YouTube同一動画が見つかった場合のみOK
-  const hasVideoContext = !isShortFormPlatform || youtubeEquivalentFound === true
+  // YouTube: 常にOK / TikTok・Instagram: YouTube同一動画が見つかった場合 or userNoteがある場合
+  const hasVideoContext = !isShortFormPlatform || youtubeEquivalentFound === true || userNote.trim().length > 0
   const hashtagList = hashtags ? hashtags.split(/\s+/).filter(Boolean).slice(0, 8) : []
   
   // Upgrade modal state
