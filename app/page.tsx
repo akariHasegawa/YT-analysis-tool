@@ -45,6 +45,7 @@ export default function Home() {
   const [analysisError, setAnalysisError] = useState<string | undefined>()
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [referenceInsights, setReferenceInsights] = useState<ReferenceInsightsPayload | null>(null)
+  const [youtubeEquivalentFound, setYoutubeEquivalentFound] = useState<boolean | null>(null)
 
   // Auth & plan state
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -425,6 +426,9 @@ export default function Home() {
               enrichedImprovements: [],
             }
           )
+          if (data.youtubeEquivalentFound != null) {
+            setYoutubeEquivalentFound(data.youtubeEquivalentFound)
+          }
         } else {
           setAnalysis(null)
           setReferenceInsights(null)
@@ -518,6 +522,7 @@ export default function Home() {
         hashtags={pendingExtensionData?.hashtags ?? ""}
         bgm={pendingExtensionData?.bgm ?? ""}
         topComments={pendingExtensionData?.topComments ?? []}
+        youtubeEquivalentFound={youtubeEquivalentFound}
       />
       <SignupModal
         isOpen={showSignupModal}

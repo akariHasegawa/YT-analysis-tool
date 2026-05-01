@@ -319,12 +319,41 @@ import { NextRequest, NextResponse } from "next/server"
     }
 
     // ★ 字幕を先に取得してメイン分析にも使う
-    // YouTube: APIで取得 / TikTok・Instagram: Chrome拡張のcaptionsを使用
+    // YouTube: APIで取得 / TikTok・Instagram: YouTube同一動画を検索して字幕取得
     let transcript = ""
+    let youtubeEquivalentFound = false
+
     if (platform === "youtube") {
       transcript = await adapter.fetchTranscript(url, { durationHintSec: duration ?? null })
-    } else if (extensionData?.captions) {
-      transcript = extensionData.captions
+    } else {
+      // TikTok・Instagram: タイトル+チャンネル名でYouTube検索して同一動画を探す
+      const ytApiKey = process.env.YOUTUBE_DATA_API_KEY
+      const searchQuery = [channelName, title].filter(Boolean).join(" ").slice(0, 100)
+      if (ytApiKey && searchQuery.trim().length > 3) {
+        try {
+          const searchRes = await fetch(
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=1&q=${encodeURIComponent(searchQuery)}&key=${ytApiKey}`
+          )
+          if (searchRes.ok) {
+            const searchData = await searchRes.json() as { items?: Array<{ id: { videoId: string } }> }
+            const videoId = searchData.items?.[0]?.id?.videoId
+            if (videoId) {
+              const ytUrl = `https://www.youtube.com/watch?v=${videoId}`
+              const ytTranscript = await youtubePlatform.fetchTranscript(ytUrl, { durationHintSec: null })
+              if (ytTranscript.length > 50) {
+                transcript = ytTranscript
+                youtubeEquivalentFound = true
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("[analyze] YouTube equivalent search failed:", e)
+        }
+      }
+      // フォールバック: captionsがあれば使う
+      if (!youtubeEquivalentFound && extensionData?.captions) {
+        transcript = extensionData.captions
+      }
     }
 
     let competitorTranscript = ""
@@ -600,7 +629,8 @@ ${hasTranscript
       analysis: typeof analysis
       referenceInsights: typeof referenceInsights
       usage?: UsagePayload
-    } = { analysis, referenceInsights }
+      youtubeEquivalentFound?: boolean
+    } = { analysis, referenceInsights, youtubeEquivalentFound: youtubeEquivalentFound || undefined }
 
     if (!isGuest && admin && authUser != null) {
       try {

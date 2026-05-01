@@ -61,6 +61,7 @@ interface ResultsScreenProps {
   hashtags?: string
   bgm?: string
   topComments?: string[]
+  youtubeEquivalentFound?: boolean | null
 }
 
 type AnalysisCardKey = "hook" | "emotion" | "cta" | "structure" | "retention"
@@ -128,11 +129,13 @@ export function ResultsScreen({
   hashtags = "",
   bgm = "",
   topComments = [],
+  youtubeEquivalentFound = null,
 }: ResultsScreenProps) {
   const { t, language } = useLanguage()
   const locale = language === "ja" ? "ja-JP" : "en-US"
   const isShortFormPlatform = /tiktok\.com|instagram\.com/.test(videoUrl)
-  const hasVideoContext = !isShortFormPlatform || topComments.length > 0 || Boolean(analysis?.subjectType) || Boolean(analysis?.actionType)
+  // YouTube: 常にOK / TikTok・Instagram: YouTube同一動画が見つかった場合のみOK
+  const hasVideoContext = !isShortFormPlatform || youtubeEquivalentFound === true
   const hashtagList = hashtags ? hashtags.split(/\s+/).filter(Boolean).slice(0, 8) : []
   
   // Upgrade modal state
