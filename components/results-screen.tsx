@@ -61,6 +61,7 @@ interface ResultsScreenProps {
   hashtags?: string
   bgm?: string
   topComments?: string[]
+  userNote?: string
   youtubeEquivalentFound?: boolean | null
 }
 
@@ -129,6 +130,7 @@ export function ResultsScreen({
   hashtags = "",
   bgm = "",
   topComments = [],
+  userNote = "",
   youtubeEquivalentFound = null,
 }: ResultsScreenProps) {
   const { t, language } = useLanguage()
@@ -223,6 +225,7 @@ export function ResultsScreen({
             actionType: analysis.actionType,
             improvementIdeas: analysis.improvementIdeas,
             topComments: topComments.length > 0 ? topComments : undefined,
+            userNote: userNote || undefined,
             ...(analysis.competitorComparison
               ? { competitorComparison: analysis.competitorComparison }
               : {}),

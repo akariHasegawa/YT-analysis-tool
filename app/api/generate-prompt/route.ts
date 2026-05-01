@@ -23,6 +23,7 @@ const bodySchema = z.object({
     emotion: z.string().optional(),
     competitorComparison: competitorComparisonContextSchema,
     topComments: z.array(z.string()).optional(),
+    userNote: z.string().optional(),
     multiContext: z.object({
       commonStructure: z.string().optional(),
       commonCTAPatterns: z.array(z.string()).optional(),
@@ -176,6 +177,7 @@ ${context.subjectType ? `被写体タイプ: ${context.subjectType}` : ""}
 ${context.actionType ? `映像アクション: ${context.actionType}` : ""}
 ${context.hook ? `フックパターン: ${context.hook}` : ""}
 ${context.emotion ? `感情設計・トーン: ${context.emotion}` : ""}
+${context.userNote ? `【投稿者メモ（最優先で反映）】: ${context.userNote}` : ""}
 ${context.topComments?.length ? `視聴者コメント（ジャンル判定に使用）:\n${context.topComments.map((c, idx) => `${idx + 1}. ${c}`).join("\n")}` : ""}
 
 【次に作る動画アイデア】

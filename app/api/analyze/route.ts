@@ -196,6 +196,7 @@ import { NextRequest, NextResponse } from "next/server"
         bgm: z.string().optional().default(""),
         thumbnailUrl: z.string().optional().default(""),
         topComments: z.array(z.string()).optional().default([]),
+        userNote: z.string().optional().default(""),
       })
       .optional(),
   })
@@ -335,15 +336,23 @@ import { NextRequest, NextResponse } from "next/server"
             `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=1&q=${encodeURIComponent(searchQuery)}&key=${ytApiKey}`
           )
           if (searchRes.ok) {
-            const searchData = await searchRes.json() as { items?: Array<{ id: { videoId: string } }> }
-            const videoId = searchData.items?.[0]?.id?.videoId
+            const searchData = await searchRes.json() as {
+              items?: Array<{ id: { videoId: string }; snippet: { title: string; description: string } }>
+            }
+            const item = searchData.items?.[0]
+            const videoId = item?.id?.videoId
             if (videoId) {
               const ytUrl = `https://www.youtube.com/watch?v=${videoId}`
               const ytTranscript = await youtubePlatform.fetchTranscript(ytUrl, { durationHintSec: null })
               if (ytTranscript.length > 50) {
                 transcript = ytTranscript
-                youtubeEquivalentFound = true
+              } else {
+                // 字幕なしでもYouTubeのタイトル・説明文をコンテキストとして使う
+                const ytTitle = item?.snippet?.title ?? ""
+                const ytDesc = (item?.snippet?.description ?? "").slice(0, 500)
+                transcript = [ytTitle, ytDesc].filter(Boolean).join("\n")
               }
+              youtubeEquivalentFound = true
             }
           }
         } catch (e) {
@@ -395,6 +404,7 @@ import { NextRequest, NextResponse } from "next/server"
     const bgm = extensionData?.bgm || ""
     const hashtags = extensionData?.hashtags || ""
     const topComments = extensionData?.topComments ?? []
+    const userNote = extensionData?.userNote || ""
 
     const systemPrompt = buildUnifiedAnalysisSystemPrompt(
       mode, hasCompetitorUrl, Boolean(thumbForOpenAi), isVisualContent
@@ -404,8 +414,12 @@ import { NextRequest, NextResponse } from "next/server"
       ? `視聴者コメント（上位）:\n${topComments.map((c, i) => `${i + 1}. ${c}`).join("\n")}\n`
       : ""
 
+    const userNoteBlock = userNote
+      ? `\n【投稿者メモ（最優先で反映）】: ${userNote}\n`
+      : ""
+
     const visualMetaBlock = isVisualContent
-      ? `\n--- ビジュアル系コンテンツ情報 ---\nBGM・使用音源: ${bgm || "不明"}\nハッシュタグ: ${hashtags || "なし"}\nプラットフォーム: ${getPlatformSheetLabel(url)}\n${commentsBlock}`
+      ? `\n--- ビジュアル系コンテンツ情報 ---\nBGM・使用音源: ${bgm || "不明"}\nハッシュタグ: ${hashtags || "なし"}\nプラットフォーム: ${getPlatformSheetLabel(url)}\n${commentsBlock}${userNoteBlock}`
       : ""
 
     const hasTranscript = Boolean(transcript) && !isVisualContent
@@ -413,7 +427,7 @@ import { NextRequest, NextResponse } from "next/server"
 動画URL: ${url}
 動画タイトル: ${title}
 チャンネル名: ${channelName}
-${visualMetaBlock}${hasTranscript ? `\n--- 字幕（秒付き） ---\n${transcript.slice(0, 11000)}` : isVisualContent ? `${transcript ? `\n--- キャプション・説明文 ---\n${transcript.slice(0, 3000)}\n` : ""}（字幕・音声なし：ビジュアル系コンテンツとして分析）` : "（字幕・音声なし：ビジュアル系コンテンツとして分析）"}
+${userNoteBlock}${visualMetaBlock}${hasTranscript ? `\n--- 字幕（秒付き） ---\n${transcript.slice(0, 11000)}` : isVisualContent ? `${transcript ? `\n--- YouTube版タイトル・説明文 ---\n${transcript.slice(0, 3000)}\n` : ""}（字幕・音声なし：ビジュアル系コンテンツとして分析）` : "（字幕・音声なし：ビジュアル系コンテンツとして分析）"}
 ${competitorBlock}
 【厳守】analysis.improvementIdeas の5件は以下のルールに従うこと：
 ${hasTranscript

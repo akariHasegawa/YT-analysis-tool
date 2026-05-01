@@ -148,7 +148,12 @@ async function handleAnalyze() {
 
   try {
     const data = scrapeData()
-    chrome.runtime.sendMessage({ type: 'OPEN_AIAI', data })
+    chrome.storage.local.get(['aiai_user_note'], (result) => {
+      if (result.aiai_user_note) {
+        data.extensionData.userNote = result.aiai_user_note
+      }
+      chrome.runtime.sendMessage({ type: 'OPEN_AIAI', data })
+    })
   } catch (e) {
     console.error('[AIAI] scrapeData error', e)
   }

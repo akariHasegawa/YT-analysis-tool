@@ -120,6 +120,40 @@
       font-size: 11px;
     }
     .hint strong { color: #cbd5e1; }
+    .note-section {
+      margin-top: 14px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding-top: 14px;
+    }
+    .note-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: .06em;
+      margin-bottom: 4px;
+    }
+    .note-sublabel {
+      font-size: 10px;
+      color: #475569;
+      margin-bottom: 6px;
+      line-height: 1.5;
+    }
+    .note-input {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 12px;
+      padding: 8px 10px;
+      resize: none;
+      font-family: inherit;
+      line-height: 1.5;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .note-input:focus { border-color: rgba(99,102,241,0.5); }
+    .note-input::placeholder { color: #475569; }
   </style>
 </head>
 <body>
@@ -145,6 +179,13 @@
     </div>
     <button class="btn btn-green" id="analyze-multi-btn" disabled>まとめて分析する（0/5）</button>
     <button class="btn btn-danger" id="clear-list-btn">リストをクリア</button>
+  </div>
+
+  <!-- 動画メモ入力（接続済み時のみ表示） -->
+  <div class="note-section" id="note-section" style="display:none">
+    <div class="note-label">📝 動画の内容メモ（任意）</div>
+    <div class="note-sublabel">入力すると分析精度が上がります<br>例：川に落ちるコミカル動画 / ダンス系 / 料理レシピ解説</div>
+    <textarea class="note-input" id="note-input" rows="2" placeholder="この動画について一言..."></textarea>
   </div>
 
   <div class="hint" id="hint">

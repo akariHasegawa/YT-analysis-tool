@@ -10,6 +10,8 @@ const multiSection = document.getElementById('multi-section')
 const videoListEl = document.getElementById('video-list')
 const analyzeMultiBtn = document.getElementById('analyze-multi-btn')
 const clearListBtn = document.getElementById('clear-list-btn')
+const noteSection = document.getElementById('note-section')
+const noteInput = document.getElementById('note-input')
 
 function setConnected(connected) {
   if (connected) {
@@ -18,14 +20,21 @@ function setConnected(connected) {
     statusTextEl.textContent = '接続済み'
     openBtn.textContent = 'AIAI-shortを開く'
     disconnectBtn.style.display = 'block'
+    noteSection.style.display = 'block'
   } else {
     statusEl.className = 'status disconnected'
     dotEl.className = 'dot red'
     statusTextEl.textContent = '未接続'
     openBtn.textContent = 'AIAI-shortで連携する'
     disconnectBtn.style.display = 'none'
+    noteSection.style.display = 'none'
   }
 }
+
+// メモの保存・読み込み
+noteInput.addEventListener('input', () => {
+  chrome.storage.local.set({ aiai_user_note: noteInput.value })
+})
 
 function setPlan(plan) {
   planBadge.textContent = plan.toUpperCase()
@@ -66,7 +75,8 @@ function renderVideoList(list) {
 }
 
 // 初期化
-chrome.storage.local.get(['aiai_token', 'aiai_plan', 'aiai_multi_list'], (result) => {
+chrome.storage.local.get(['aiai_token', 'aiai_plan', 'aiai_multi_list', 'aiai_user_note'], (result) => {
+  if (result.aiai_user_note) noteInput.value = result.aiai_user_note
   const connected = Boolean(result.aiai_token)
   setConnected(connected)
 

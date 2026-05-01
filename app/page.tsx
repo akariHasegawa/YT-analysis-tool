@@ -73,6 +73,7 @@ export default function Home() {
     bgm?: string
     thumbnailUrl?: string
     topComments?: string[]
+    userNote?: string
   } | null>(null)
   const [pendingExtensionPayload, setPendingExtensionPayload] = useState<{
     url: string
@@ -522,6 +523,7 @@ export default function Home() {
         hashtags={pendingExtensionData?.hashtags ?? ""}
         bgm={pendingExtensionData?.bgm ?? ""}
         topComments={pendingExtensionData?.topComments ?? []}
+        userNote={(pendingExtensionData as { userNote?: string } | null)?.userNote ?? ""}
         youtubeEquivalentFound={youtubeEquivalentFound}
       />
       <SignupModal
