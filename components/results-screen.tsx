@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useLanguage } from "@/lib/language-context"
 import { Button } from "@/components/ui/button"
 import {
@@ -174,6 +174,11 @@ export function ResultsScreen({
     captionCopied: boolean
   }
   const [promptStates, setPromptStates] = useState<Record<number, PromptState>>({})
+
+  // Reset prompt states when a new video is analyzed
+  useEffect(() => {
+    setPromptStates({})
+  }, [videoUrl])
 
   const getPromptState = (i: number): PromptState =>
     promptStates[i] ?? {

@@ -26,24 +26,26 @@ function parseCount(text) {
 }
 
 function getCurrentReelUrl() {
-  // If already on a specific reel/post page
-  if (/\/(reel|p)\/[A-Za-z0-9_-]+/.test(location.pathname)) return window.location.href
+  // If already on a specific reel/post page (reel, reels, or p)
+  if (/\/(reels?|p)\/[A-Za-z0-9_-]+/.test(location.pathname)) return window.location.href
 
-  // Find the currently visible video and its reel link
+  // Find the currently playing video first, then visible video
   const allVideos = Array.from(document.querySelectorAll('video'))
-  const visibleVideo = allVideos.find(v => {
+  const playingVideo = allVideos.find(v => !v.paused && v.readyState > 0)
+  const visibleVideo = playingVideo || allVideos.find(v => {
     const r = v.getBoundingClientRect()
-    return r.top < window.innerHeight * 0.6 && r.bottom > window.innerHeight * 0.4
+    const center = (r.top + r.bottom) / 2
+    return center > window.innerHeight * 0.3 && center < window.innerHeight * 0.7
   }) || allVideos[0]
 
   if (visibleVideo) {
     const container = visibleVideo.closest('article, [role="presentation"], div[class*="reel"], section')
-    const link = container?.querySelector('a[href*="/reel/"], a[href*="/p/"]')
+    const link = container?.querySelector('a[href*="/reels/"], a[href*="/reel/"], a[href*="/p/"]')
     if (link?.href) return link.href
   }
 
   // Fallback: first reel link on page
-  const firstReelLink = document.querySelector('a[href*="/reel/"], a[href*="/p/"]')
+  const firstReelLink = document.querySelector('a[href*="/reels/"], a[href*="/reel/"], a[href*="/p/"]')
   return firstReelLink?.href || window.location.href
 }
 
