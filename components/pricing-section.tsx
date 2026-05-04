@@ -66,6 +66,7 @@ export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: Pri
               <FeatureItem text="秒単位の改善提案" />
               <FeatureItem text="次の動画アイデア4つ" />
               <FeatureItem text="比較結果から台本・動画生成プロンプトを生成（4パターン）" />
+              <FeatureItem text="投稿文・ハッシュタグ自動生成" />
             </div>
 
             <button

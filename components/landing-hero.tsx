@@ -42,7 +42,7 @@ export function LandingHero({ onGetStarted }: LandingHeroProps) {
           </div>
           <div className="flex items-center justify-center gap-2 text-sm text-gray-400 sm:text-base animate-fade-up-delay-3">
             <span className="text-[#6366f1]">●</span>
-            <span>次の動画案と台本</span>
+            <span>次の動画案・台本・投稿文</span>
           </div>
         </div>
 
