@@ -23,6 +23,7 @@ import {
   Scale,
   Music2,
   Hash,
+  MessageSquare,
   type LucideIcon,
 } from "lucide-react"
 import { LockedFeature, PlanBadge } from "@/components/locked-feature"
@@ -166,6 +167,11 @@ export function ResultsScreen({
     castCount: CastCount
     dialogueStyle: string
     error: string | null
+    captionLoading: boolean
+    caption: string | null
+    captionHashtags: string | null
+    captionOpen: boolean
+    captionCopied: boolean
   }
   const [promptStates, setPromptStates] = useState<Record<number, PromptState>>({})
 
@@ -177,6 +183,11 @@ export function ResultsScreen({
       open: null,
       copied: false,
       error: null,
+      captionLoading: false,
+      caption: null,
+      captionHashtags: null,
+      captionOpen: false,
+      captionCopied: false,
       scriptSettingsOpen: false,
       castCount: "1",
       dialogueStyle: "",
@@ -255,6 +266,67 @@ export function ResultsScreen({
         [i]: { ...getPromptState(i), loading: null, error: msg },
       }))
     }
+  }
+
+  const platform = /tiktok\.com/.test(videoUrl)
+    ? "tiktok"
+    : /instagram\.com/.test(videoUrl)
+    ? "instagram"
+    : "youtube"
+
+  const generateCaption = async (i: number) => {
+    if (!analysis) return
+    const state = getPromptState(i)
+    if (state.captionOpen && state.caption) {
+      setPromptStates((prev) => ({ ...prev, [i]: { ...getPromptState(i), captionOpen: false } }))
+      return
+    }
+    if (state.caption) {
+      setPromptStates((prev) => ({ ...prev, [i]: { ...getPromptState(i), captionOpen: true } }))
+      return
+    }
+    setPromptStates((prev) => ({ ...prev, [i]: { ...getPromptState(i), captionLoading: true, captionOpen: false } }))
+    try {
+      const res = await fetch("/api/generate-caption", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idea: analysis.nextVideoIdeas[i],
+          channelName,
+          platform,
+          hook: analysis.hook.value,
+          emotion: analysis.emotion.value,
+          hashtags,
+        }),
+      })
+      const data = (await res.json()) as { caption?: string; hashtags?: string; error?: string }
+      if (!res.ok || !data.caption) throw new Error(data.error ?? "生成失敗")
+      setPromptStates((prev) => ({
+        ...prev,
+        [i]: {
+          ...getPromptState(i),
+          captionLoading: false,
+          caption: data.caption!,
+          captionHashtags: data.hashtags ?? "",
+          captionOpen: true,
+        },
+      }))
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "生成失敗"
+      setPromptStates((prev) => ({ ...prev, [i]: { ...getPromptState(i), captionLoading: false, error: msg } }))
+    }
+  }
+
+  const copyCaptionText = (i: number) => {
+    const state = getPromptState(i)
+    const text = [state.caption, state.captionHashtags].filter(Boolean).join("\n\n")
+    if (!text) return
+    navigator.clipboard.writeText(text).then(() => {
+      setPromptStates((prev) => ({ ...prev, [i]: { ...getPromptState(i), captionCopied: true } }))
+      setTimeout(() => {
+        setPromptStates((prev) => ({ ...prev, [i]: { ...getPromptState(i), captionCopied: false } }))
+      }, 2000)
+    })
   }
 
   const copyPrompt = (i: number) => {
@@ -602,7 +674,7 @@ export function ResultsScreen({
                             </div>
                             {/* ボタン */}
                             {hasVideoContext ? (
-                              <div className="flex gap-2 px-4 pb-4">
+                              <div className="flex flex-wrap gap-2 px-4 pb-4">
                                 <button
                                   type="button"
                                   onClick={() => toggleScriptSettings(i)}
@@ -633,11 +705,49 @@ export function ResultsScreen({
                                   <Video className="h-3.5 w-3.5" />
                                   {ps.loading === "video" ? "生成中..." : "動画プロンプト"}
                                 </button>
+                                {/* 投稿文生成ボタン（Pro以上） */}
+                                {(userPlan === "pro" || userPlan === "business") ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => generateCaption(i)}
+                                    disabled={ps.captionLoading}
+                                    className={cn(
+                                      "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
+                                      ps.captionOpen
+                                        ? "bg-[oklch(0.45_0.18_160)] text-white"
+                                        : "bg-[oklch(0.25_0.08_270_/_0.6)] text-[oklch(0.78_0.12_260)] hover:bg-[oklch(0.35_0.12_260_/_0.7)]",
+                                      ps.captionLoading && "opacity-60 cursor-not-allowed"
+                                    )}
+                                  >
+                                    <MessageSquare className="h-3.5 w-3.5" />
+                                    {ps.captionLoading ? "生成中..." : "投稿文生成"}
+                                  </button>
+                                ) : null}
                               </div>
                             ) : (
                               <p className="px-4 pb-4 text-xs text-muted-foreground/60">
                                 今回は動画の内容を十分に読み取れなかったため、プロンプト生成をスキップしました。
                               </p>
+                            )}
+                            {/* 投稿文表示 */}
+                            {ps.captionOpen && ps.caption && (
+                              <div className="border-t border-[oklch(0.5_0.1_270_/_0.15)] mx-0">
+                                <div className="flex items-center justify-between px-4 py-2 bg-[oklch(0.12_0.04_160_/_0.4)]">
+                                  <span className="text-xs font-semibold text-[oklch(0.65_0.1_160)]">投稿文 + ハッシュタグ</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => copyCaptionText(i)}
+                                    className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[oklch(0.72_0.12_160)] transition-colors hover:bg-[oklch(0.3_0.08_160_/_0.4)]"
+                                  >
+                                    {ps.captionCopied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+                                    {ps.captionCopied ? "コピー済み" : "コピー"}
+                                  </button>
+                                </div>
+                                <pre className="whitespace-pre-wrap px-4 py-3 text-xs leading-relaxed text-foreground/80 font-sans max-h-64 overflow-y-auto">
+                                  {ps.caption}
+                                  {ps.captionHashtags ? `\n\n${ps.captionHashtags}` : ""}
+                                </pre>
+                              </div>
                             )}
                             {ps.error && (
                               <p className="px-4 pb-3 text-xs text-red-400">エラー: {ps.error}</p>
