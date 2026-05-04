@@ -49,8 +49,8 @@ function getCurrentReelUrl() {
   return firstReelLink?.href || window.location.href
 }
 
-function scrapeData() {
-  const url = getCurrentReelUrl()
+function scrapeData(overrideUrl) {
+  const url = overrideUrl || getCurrentReelUrl()
 
   const metaDesc = document.querySelector('meta[name="description"]')?.getAttribute('content') || ''
   const ogDesc = document.querySelector('meta[property="og:description"]')?.getAttribute('content') || ''
@@ -148,15 +148,18 @@ async function handleAnalyze() {
   btn.style.opacity = '0.7'
   btn.style.pointerEvents = 'none'
 
+  // Use URL stored at button injection time to avoid reel feed race conditions
+  const storedUrl = btn.dataset.reelUrl || undefined
+
   try {
-    const data = scrapeData()
+    const data = scrapeData(storedUrl)
     chrome.storage.local.get(['aiai_user_note'], (result) => {
       data.extensionData.userNote = result?.aiai_user_note || ''
       chrome.runtime.sendMessage({ type: 'OPEN_AIAI', data })
     })
   } catch (e) {
     console.error('[AIAI] scrapeData error', e)
-    try { chrome.runtime.sendMessage({ type: 'OPEN_AIAI', data: scrapeData() }) } catch {}
+    try { chrome.runtime.sendMessage({ type: 'OPEN_AIAI', data: scrapeData(storedUrl) }) } catch {}
   }
 
   setTimeout(() => {
@@ -220,7 +223,10 @@ async function handleAddToList() {
 function injectButton() {
   if (document.getElementById(BUTTON_ID)) return
   if (!document.body) return
-  document.body.appendChild(createButton())
+  const btn = createButton()
+  // Store the URL and scraped data at injection time to avoid race conditions on reel feed
+  btn.dataset.reelUrl = getCurrentReelUrl()
+  document.body.appendChild(btn)
   chrome.storage.local.get(['aiai_plan'], (result) => {
     if (result.aiai_plan === 'business' && !document.getElementById(ADD_BUTTON_ID)) {
       document.body.appendChild(createAddButton())
