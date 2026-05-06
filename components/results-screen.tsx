@@ -136,8 +136,9 @@ export function ResultsScreen({
 }: ResultsScreenProps) {
   const { t, language } = useLanguage()
   const locale = language === "ja" ? "ja-JP" : "en-US"
-  const isShortFormPlatform = /tiktok\.com|instagram\.com/.test(videoUrl) || /youtube\.com\/shorts\//.test(videoUrl)
-  // YouTube: 常にOK / TikTok・Instagram: YouTube同一動画が見つかった場合 or userNoteがある場合
+  const isShortFormPlatform = /tiktok\.com|instagram\.com/.test(videoUrl)
+  const isYouTubeShorts = /youtube\.com\/shorts\//.test(videoUrl)
+  // TikTok・Instagram: YouTube同一動画が見つかった場合 or userNoteがある場合のみOK / YouTube（Shorts含む）: 常にOK
   const hasVideoContext = !isShortFormPlatform || youtubeEquivalentFound === true || userNote.trim().length > 0
   const hashtagList = hashtags ? hashtags.split(/\s+/).filter(Boolean).slice(0, 8) : []
   
@@ -223,7 +224,7 @@ export function ResultsScreen({
     }))
 
     const apiPromptType = promptType === "video"
-      ? (isShortFormPlatform ? "video-short" : "video-long")
+      ? (isShortFormPlatform || isYouTubeShorts ? "video-short" : "video-long")
       : "script"
 
     try {
