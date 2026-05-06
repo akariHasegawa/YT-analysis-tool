@@ -833,7 +833,7 @@ export function ResultsScreen({
                                           onClick={() =>
                                             setPromptStates((prev) => ({
                                               ...prev,
-                                              [i]: { ...getPromptState(i), castCount: c, scriptPrompt: null },
+                                              [i]: { ...getPromptState(i), castCount: c, scriptPrompt: null, scriptVideoPrompt: null },
                                             }))
                                           }
                                           className={cn(
@@ -864,7 +864,7 @@ export function ResultsScreen({
                                     onChange={(e) =>
                                       setPromptStates((prev) => ({
                                         ...prev,
-                                        [i]: { ...getPromptState(i), dialogueStyle: e.target.value, scriptPrompt: null },
+                                        [i]: { ...getPromptState(i), dialogueStyle: e.target.value, scriptPrompt: null, scriptVideoPrompt: null },
                                       }))
                                     }
                                     placeholder="例：冷静な解説スタイルで"
@@ -894,7 +894,7 @@ export function ResultsScreen({
                                       onClick={() =>
                                         setPromptStates((prev) => ({
                                           ...prev,
-                                          [i]: { ...(prev[i] ?? getPromptState(i)), scriptSettingsOpen: true, open: null, scriptPrompt: null },
+                                          [i]: { ...(prev[i] ?? getPromptState(i)), scriptSettingsOpen: true, open: null, scriptPrompt: null, scriptVideoPrompt: null },
                                         }))
                                       }
                                       className="rounded px-1.5 py-0.5 text-[10px] text-muted-foreground/50 transition-colors hover:bg-[oklch(0.3_0.08_270_/_0.4)] hover:text-muted-foreground"
