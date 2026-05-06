@@ -176,6 +176,7 @@ export function ResultsScreen({
     captionOpen: boolean
     captionCopied: boolean
     scriptVideoLoading: boolean
+    copyrightNames: boolean
   }
   const [promptStates, setPromptStates] = useState<Record<number, PromptState>>({})
 
@@ -202,6 +203,7 @@ export function ResultsScreen({
       scriptSettingsOpen: false,
       castCount: "1",
       dialogueStyle: "",
+      copyrightNames: true,
     }
 
   const toggleScriptSettings = (i: number) => {
@@ -251,6 +253,7 @@ export function ResultsScreen({
           promptType: apiPromptType,
           castCount: state.castCount,
           dialogueStyle: state.dialogueStyle,
+          copyrightNames: state.copyrightNames,
           context: {
             channelName,
             hook: analysis.hook.value,
@@ -304,6 +307,7 @@ export function ResultsScreen({
           idea: analysis.nextVideoIdeas[i],
           promptType: "video-from-script",
           script: state.scriptPrompt,
+          copyrightNames: state.copyrightNames,
           context: {
             channelName,
             hook: analysis.hook.value,
@@ -871,6 +875,32 @@ export function ResultsScreen({
                                     placeholder="例：おじさんがキキの格好をしているギャップが面白い。男性が女性キャラをコスプレするコメディ感を必ず反映して。"
                                     className="w-full rounded-lg border border-[oklch(0.4_0.08_270_/_0.3)] bg-[oklch(0.15_0.05_270_/_0.5)] px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-[oklch(0.55_0.15_260_/_0.6)] focus:outline-none resize-none"
                                   />
+                                </div>
+
+                                {/* 著作権名使用トグル */}
+                                <div className="flex items-center justify-between rounded-lg border border-[oklch(0.4_0.08_270_/_0.3)] bg-[oklch(0.15_0.05_270_/_0.3)] px-3 py-2">
+                                  <div>
+                                    <p className="text-xs font-semibold text-[oklch(0.75_0.1_260)]">著作権キャラ名・作品名を使用</p>
+                                    <p className="text-[10px] text-muted-foreground/60 mt-0.5">OFFにすると外見の特徴のみで表現（RunwayやSoraなどで推奨）</p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setPromptStates((prev) => ({
+                                        ...prev,
+                                        [i]: { ...getPromptState(i), copyrightNames: !ps.copyrightNames, scriptPrompt: null, scriptVideoPrompt: null },
+                                      }))
+                                    }
+                                    className={cn(
+                                      "relative ml-3 h-5 w-10 flex-shrink-0 rounded-full transition-colors",
+                                      ps.copyrightNames ? "bg-[oklch(0.45_0.18_250)]" : "bg-[oklch(0.3_0.08_270_/_0.5)]"
+                                    )}
+                                  >
+                                    <span className={cn(
+                                      "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
+                                      ps.copyrightNames ? "translate-x-5" : "translate-x-0.5"
+                                    )} />
+                                  </button>
                                 </div>
 
                                 <button

@@ -15,6 +15,7 @@ const bodySchema = z.object({
   castCount: z.enum(["1", "2", "3+"]).optional().default("1"),
   dialogueStyle: z.string().optional().default(""),
   script: z.string().optional().default(""),
+  copyrightNames: z.boolean().optional().default(true),
   context: z.object({
     channelName: z.string(),
     subjectType: z.string().optional(),
@@ -77,6 +78,12 @@ function buildVideoSystemPrompt(format: "short" | "long"): string {
   被写体がどの方向を向いているか・カメラはどこから撮っているかを明記する
   例：「カメラは正面から」「後方から人物越しに海を映す」「横からのサイドショット」「俯瞰で撮影」
   「〜を見ている」だけでは向きが曖昧になるため、必ずカメラ位置・構図・視線方向をセットで書くこと
+- 【動きは具体的に書くこと】
+  「コメディタッチの動き」「楽しそうなダンス」などの抽象表現は禁止。
+  例：「両腕を大げさに広げ、くるくる回りながら大きくステップを踏む」のように動作を明示する
+- 【音声・セリフ・ナレーション指示は映像描写に変換すること】
+  動画生成AIは映像のみ生成するため「〜と言いながら」「ナレーションが入る」「セリフを言う」は使わない
+  例：「〜と叫びながら」→「大きく口を開け、驚いた表情で両手を広げる」に変換する
 
 【出力形式】
 以下の形式で、シーン1〜3の順に出力すること。各シーンは5〜10秒で完結する映像として設計すること。
@@ -203,6 +210,8 @@ const VIDEO_FROM_SCRIPT_PROMPT = `あなたはKling AI等の動画生成AIに渡
 - 台本のフック・本編・締めの構成に沿ってシーン1〜3に分割する
 - 各シーンは5〜10秒で完結する映像として設計する
 - プロンプトは日本語で書く
+- 【動きは具体的に書くこと】「コメディタッチの動き」などの抽象表現は禁止。「両腕を大げさに広げてくるくる回る」のように動作を明示する
+- 【音声・セリフ指示は映像描写に変換すること】動画生成AIは映像のみ生成するため「〜と言いながら」「ナレーションが入る」は使わない。表情・動作・テロップ描写に置き換えること
 
 【出力形式】
 ---
@@ -239,7 +248,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
   }
 
-  const { idea, promptType, castCount, dialogueStyle, script, context } = parsed.data
+  const { idea, promptType, castCount, dialogueStyle, script, copyrightNames, context } = parsed.data
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini"
 
   const mc = context.multiContext
@@ -250,6 +259,7 @@ ${context.hook ? `フックパターン: ${context.hook}` : ""}
 ${context.emotion ? `感情設計・トーン: ${context.emotion}` : ""}
 ${context.userNote ? `【投稿者メモ（最優先で反映）】: ${context.userNote}` : ""}
 ${dialogueStyle ? `【制作者のこだわりポイント・追加指示（最優先で反映）】\n${dialogueStyle}` : ""}
+${!copyrightNames ? `【著作権キャラクター名・作品名の扱い】著作権で保護されたキャラクター名・作品名・固有名詞は一切使用しないこと。代わりに外見の特徴（衣装の色・形・髪型・小道具など）のみで表現すること。例：「ハク」→「白い着物に黒髪ロングウィッグをつけた精霊風の人物」` : ""}
 ${context.topComments?.length ? `視聴者コメント（ジャンル判定に使用）:\n${context.topComments.map((c, idx) => `${idx + 1}. ${c}`).join("\n")}` : ""}
 
 【次に作る動画アイデア】
@@ -287,7 +297,7 @@ ${context.improvementIdeas?.length ? `参考ポイント:\n${context.improvement
           temperature: 0.7,
           messages: [
             { role: "system", content: VIDEO_FROM_SCRIPT_PROMPT },
-            { role: "user", content: `【台本】\n${script}\n\n【動画アイデア】\n${idea}${dialogueStyle ? `\n\n【制作者のこだわりポイント・追加指示（最優先で反映）】\n${dialogueStyle}` : ""}` },
+            { role: "user", content: `【台本】\n${script}\n\n【動画アイデア】\n${idea}${dialogueStyle ? `\n\n【制作者のこだわりポイント・追加指示（最優先で反映）】\n${dialogueStyle}` : ""}${!copyrightNames ? `\n\n【著作権キャラクター名・作品名の扱い】著作権で保護されたキャラクター名・作品名は一切使用しないこと。外見の特徴のみで表現すること。例：「ハク」→「白い着物に黒髪ロングウィッグをつけた精霊風の人物」` : ""}` },
           ],
         }),
       })
