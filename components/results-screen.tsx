@@ -282,11 +282,9 @@ export function ResultsScreen({
     if (!analysis) return
     const state = getPromptState(i)
     if (!state.scriptPrompt) return
-    if (state.scriptVideoPrompt) {
-      setPromptStates((prev) => ({ ...prev, [i]: { ...getPromptState(i), open: state.open === "script-video" ? null : "script-video" } }))
-      return
-    }
-    setPromptStates((prev) => ({ ...prev, [i]: { ...getPromptState(i), scriptVideoLoading: true, open: null } }))
+    // すでに生成済みなら何もしない（表示は scriptVideoPrompt の存在で制御）
+    if (state.scriptVideoPrompt) return
+    setPromptStates((prev) => ({ ...prev, [i]: { ...(prev[i] ?? getPromptState(i)), scriptVideoLoading: true } }))
     try {
       const res = await fetch("/api/generate-prompt", {
         method: "POST",
@@ -308,11 +306,11 @@ export function ResultsScreen({
       if (!res.ok || !data.prompt) throw new Error(data.error ?? "生成失敗")
       setPromptStates((prev) => ({
         ...prev,
-        [i]: { ...getPromptState(i), scriptVideoLoading: false, scriptVideoPrompt: data.prompt!, open: "script-video" },
+        [i]: { ...(prev[i] ?? getPromptState(i)), scriptVideoLoading: false, scriptVideoPrompt: data.prompt! },
       }))
     } catch (e) {
       const msg = e instanceof Error ? e.message : "生成失敗"
-      setPromptStates((prev) => ({ ...prev, [i]: { ...getPromptState(i), scriptVideoLoading: false, error: msg } }))
+      setPromptStates((prev) => ({ ...prev, [i]: { ...(prev[i] ?? getPromptState(i)), scriptVideoLoading: false, error: msg } }))
     }
   }
 
@@ -892,8 +890,8 @@ export function ResultsScreen({
                                 <pre className="whitespace-pre-wrap px-4 py-3 text-xs leading-relaxed text-foreground/80 font-sans max-h-64 overflow-y-auto">
                                   {activePrompt}
                                 </pre>
-                                {/* 台本から動画プロンプト生成ボタン（台本表示中のみ） */}
-                                {ps.open === "script" && ps.scriptPrompt && (
+                                {/* 台本から動画プロンプト生成ボタン（台本表示中 かつ 未生成のみ） */}
+                                {ps.open === "script" && ps.scriptPrompt && !ps.scriptVideoPrompt && (
                                   <div className="border-t border-[oklch(0.5_0.1_270_/_0.15)] px-4 py-3">
                                     <button
                                       type="button"
@@ -912,8 +910,8 @@ export function ResultsScreen({
                                 )}
                               </div>
                             )}
-                            {/* 台本ベースの動画プロンプト表示 */}
-                            {ps.open === "script-video" && ps.scriptVideoPrompt && (
+                            {/* 台本ベースの動画プロンプト表示（生成済みなら常に表示） */}
+                            {ps.scriptVideoPrompt && (
                               <div className="border-t border-[oklch(0.5_0.1_270_/_0.15)] mx-0">
                                 <div className="flex items-center justify-between px-4 py-2 bg-[oklch(0.12_0.04_300_/_0.5)]">
                                   <span className="text-xs font-semibold text-[oklch(0.65_0.1_300)]">台本ベース 動画プロンプト（Kling AI用）</span>
