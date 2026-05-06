@@ -888,7 +888,7 @@ export function ResultsScreen({
                                     onClick={() =>
                                       setPromptStates((prev) => ({
                                         ...prev,
-                                        [i]: { ...getPromptState(i), copyrightNames: !ps.copyrightNames, scriptPrompt: null, scriptVideoPrompt: null },
+                                        [i]: { ...(prev[i] ?? getPromptState(i)), copyrightNames: !(prev[i] ?? getPromptState(i)).copyrightNames, scriptPrompt: null, scriptVideoPrompt: null },
                                       }))
                                     }
                                     className={cn(
