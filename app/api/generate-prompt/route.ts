@@ -157,7 +157,8 @@ ${idea}
 ${fields.target ?? ""}
 
 【登場人数・形式】
-${castFormats[castCount] ?? castFormats["1"]}${dialogueStyle ? `　スタイル：${dialogueStyle}` : ""}
+${castFormats[castCount] ?? castFormats["1"]}
+${dialogueStyle ? `\n【制作者のこだわりポイント・追加指示（最優先で台本に反映）】\n${dialogueStyle}\n` : ""}
 
 【冒頭フック（0〜3秒）】
 ${fields.hook ?? ""}
@@ -240,6 +241,7 @@ ${context.actionType ? `映像アクション: ${context.actionType}` : ""}
 ${context.hook ? `フックパターン: ${context.hook}` : ""}
 ${context.emotion ? `感情設計・トーン: ${context.emotion}` : ""}
 ${context.userNote ? `【投稿者メモ（最優先で反映）】: ${context.userNote}` : ""}
+${dialogueStyle ? `【制作者のこだわりポイント・追加指示（最優先で反映）】\n${dialogueStyle}` : ""}
 ${context.topComments?.length ? `視聴者コメント（ジャンル判定に使用）:\n${context.topComments.map((c, idx) => `${idx + 1}. ${c}`).join("\n")}` : ""}
 
 【次に作る動画アイデア】
@@ -277,7 +279,7 @@ ${context.improvementIdeas?.length ? `参考ポイント:\n${context.improvement
           temperature: 0.7,
           messages: [
             { role: "system", content: VIDEO_FROM_SCRIPT_PROMPT },
-            { role: "user", content: `【台本】\n${script}\n\n【動画アイデア】\n${idea}` },
+            { role: "user", content: `【台本】\n${script}\n\n【動画アイデア】\n${idea}${dialogueStyle ? `\n\n【制作者のこだわりポイント・追加指示（最優先で反映）】\n${dialogueStyle}` : ""}` },
           ],
         }),
       })

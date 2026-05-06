@@ -850,16 +850,17 @@ export function ResultsScreen({
                                   </div>
                                 </div>
 
-                                {/* 対話の雰囲気 */}
+                                {/* こだわりポイント */}
                                 <div className="space-y-2">
                                   <p className="text-xs font-semibold text-[oklch(0.75_0.1_260)]">
-                                    対話の雰囲気・スタイル（任意）
+                                    こだわりポイント・追加指示（任意）
                                   </p>
                                   <p className="text-[11px] text-muted-foreground/70">
-                                    例：白熱した議論　冷静な解説　コミカル　感動的　緊迫感あり
+                                    台本・動画プロンプト両方に反映されます。<br />
+                                    例：おじさんがキキの格好をしているギャップが面白い　男性が女性キャラをやるコメディ感を大切に
                                   </p>
-                                  <input
-                                    type="text"
+                                  <textarea
+                                    rows={3}
                                     value={ps.dialogueStyle}
                                     onChange={(e) =>
                                       setPromptStates((prev) => ({
@@ -867,8 +868,8 @@ export function ResultsScreen({
                                         [i]: { ...getPromptState(i), dialogueStyle: e.target.value, scriptPrompt: null, scriptVideoPrompt: null },
                                       }))
                                     }
-                                    placeholder="例：冷静な解説スタイルで"
-                                    className="w-full rounded-lg border border-[oklch(0.4_0.08_270_/_0.3)] bg-[oklch(0.15_0.05_270_/_0.5)] px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-[oklch(0.55_0.15_260_/_0.6)] focus:outline-none"
+                                    placeholder="例：おじさんがキキの格好をしているギャップが面白い。男性が女性キャラをコスプレするコメディ感を必ず反映して。"
+                                    className="w-full rounded-lg border border-[oklch(0.4_0.08_270_/_0.3)] bg-[oklch(0.15_0.05_270_/_0.5)] px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-[oklch(0.55_0.15_260_/_0.6)] focus:outline-none resize-none"
                                   />
                                 </div>
 
