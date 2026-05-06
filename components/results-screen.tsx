@@ -24,6 +24,7 @@ import {
   Music2,
   Hash,
   MessageSquare,
+  Loader2,
   type LucideIcon,
 } from "lucide-react"
 import { LockedFeature, PlanBadge } from "@/components/locked-feature"
@@ -720,7 +721,8 @@ export function ResultsScreen({
                     <div className="grid grid-cols-1 gap-4">
                       {analysis.nextVideoIdeas.map((text, i) => {
                         const ps = getPromptState(i)
-                        const activePrompt = ps.open === "script" ? ps.scriptPrompt : ps.videoPrompt
+                        const videoSections = ps.videoPrompt ? parseVideoPromptSections(ps.videoPrompt) : null
+                        const scriptVideoSections = ps.scriptVideoPrompt ? parseVideoPromptSections(ps.scriptVideoPrompt) : null
                         return (
                           <div key={i} className="rounded-xl border border-[oklch(0.5_0.1_270_/_0.2)] bg-[oklch(0.16_0.05_280_/_0.35)] overflow-hidden">
                             {/* アイデアテキスト */}
@@ -743,7 +745,7 @@ export function ResultsScreen({
                                     ps.loading === "script" && "opacity-60 cursor-not-allowed"
                                   )}
                                 >
-                                  <FileText className="h-3.5 w-3.5" />
+                                  {ps.loading === "script" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
                                   {ps.loading === "script" ? "生成中..." : "台本プロンプト"}
                                 </button>
                                 <button
@@ -758,7 +760,7 @@ export function ResultsScreen({
                                     ps.loading === "video" && "opacity-60 cursor-not-allowed"
                                   )}
                                 >
-                                  <Video className="h-3.5 w-3.5" />
+                                  {ps.loading === "video" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Video className="h-3.5 w-3.5" />}
                                   {ps.loading === "video" ? "生成中..." : "動画プロンプト"}
                                 </button>
                                 {/* 投稿文生成ボタン（Pro以上） */}
@@ -775,7 +777,7 @@ export function ResultsScreen({
                                       ps.captionLoading && "opacity-60 cursor-not-allowed"
                                     )}
                                   >
-                                    <MessageSquare className="h-3.5 w-3.5" />
+                                    {ps.captionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageSquare className="h-3.5 w-3.5" />}
                                     {ps.captionLoading ? "生成中..." : "投稿文生成"}
                                   </button>
                                 ) : null}
@@ -876,33 +878,29 @@ export function ResultsScreen({
                                   disabled={ps.loading !== null}
                                   className="flex w-full items-center justify-center gap-2 rounded-lg bg-[oklch(0.45_0.18_250)] py-2 text-xs font-semibold text-white transition-all hover:bg-[oklch(0.5_0.2_250)] disabled:opacity-60"
                                 >
-                                  <FileText className="h-3.5 w-3.5" />
+                                  {ps.loading === "script" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
                                   {ps.loading === "script" ? "生成中..." : "この設定で台本プロンプトを生成"}
                                 </button>
                               </div>
                             )}
-                            {/* 生成されたプロンプト表示 */}
-                            {ps.open && ps.open !== "script-video" && activePrompt && (
+                            {/* 台本プロンプト表示 */}
+                            {ps.open === "script" && ps.scriptPrompt && (
                               <div className="border-t border-[oklch(0.5_0.1_270_/_0.15)] mx-0">
                                 <div className="flex items-center justify-between px-4 py-2 bg-[oklch(0.12_0.04_280_/_0.5)]">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-xs font-semibold text-[oklch(0.65_0.1_270)]">
-                                      {ps.open === "script" ? "台本プロンプト" : "動画生成プロンプト"}
-                                    </span>
-                                    {ps.open === "script" && (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setPromptStates((prev) => ({
-                                            ...prev,
-                                            [i]: { ...(prev[i] ?? getPromptState(i)), scriptSettingsOpen: true, open: null, scriptPrompt: null },
-                                          }))
-                                        }
-                                        className="rounded px-1.5 py-0.5 text-[10px] text-muted-foreground/50 transition-colors hover:bg-[oklch(0.3_0.08_270_/_0.4)] hover:text-muted-foreground"
-                                      >
-                                        設定変更・再生成
-                                      </button>
-                                    )}
+                                    <span className="text-xs font-semibold text-[oklch(0.65_0.1_270)]">台本プロンプト</span>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setPromptStates((prev) => ({
+                                          ...prev,
+                                          [i]: { ...(prev[i] ?? getPromptState(i)), scriptSettingsOpen: true, open: null, scriptPrompt: null },
+                                        }))
+                                      }
+                                      className="rounded px-1.5 py-0.5 text-[10px] text-muted-foreground/50 transition-colors hover:bg-[oklch(0.3_0.08_270_/_0.4)] hover:text-muted-foreground"
+                                    >
+                                      設定変更・再生成
+                                    </button>
                                   </div>
                                   <button
                                     type="button"
@@ -914,10 +912,10 @@ export function ResultsScreen({
                                   </button>
                                 </div>
                                 <pre className="whitespace-pre-wrap px-4 py-3 text-xs leading-relaxed text-foreground/80 font-sans max-h-64 overflow-y-auto">
-                                  {activePrompt}
+                                  {ps.scriptPrompt}
                                 </pre>
-                                {/* 台本から動画プロンプト生成ボタン（台本表示中 かつ 未生成のみ） */}
-                                {ps.open === "script" && ps.scriptPrompt && !ps.scriptVideoPrompt && (
+                                {/* 台本→動画プロンプト生成ボタン（未生成のみ） */}
+                                {!ps.scriptVideoPrompt && (
                                   <div className="border-t border-[oklch(0.5_0.1_270_/_0.15)] px-4 py-3">
                                     <button
                                       type="button"
@@ -929,35 +927,78 @@ export function ResultsScreen({
                                         ps.scriptVideoLoading && "opacity-60 cursor-not-allowed"
                                       )}
                                     >
-                                      <Video className="h-3.5 w-3.5" />
+                                      {ps.scriptVideoLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Video className="h-3.5 w-3.5" />}
                                       {ps.scriptVideoLoading ? "生成中..." : "この台本で動画プロンプトを生成"}
                                     </button>
                                   </div>
                                 )}
                               </div>
                             )}
-                            {/* 台本ベースの動画プロンプト表示（生成済みなら常に表示） */}
+                            {/* 動画プロンプト表示（シーン分割 or 全体） */}
+                            {ps.open === "video" && ps.videoPrompt && (
+                              <div className="border-t border-[oklch(0.5_0.1_270_/_0.15)] mx-0">
+                                <div className="px-4 py-2 bg-[oklch(0.12_0.04_280_/_0.5)]">
+                                  <span className="text-xs font-semibold text-[oklch(0.65_0.1_270)]">
+                                    {videoSections ? "動画生成プロンプト（シーン別）" : "動画生成プロンプト"}
+                                  </span>
+                                </div>
+                                {videoSections ? (
+                                  videoSections.map((section, si) => (
+                                    <div key={si} className="border-t border-[oklch(0.5_0.1_270_/_0.15)] px-4 py-3">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs font-semibold text-[oklch(0.72_0.12_260)]">{section.title}</span>
+                                        <SceneCopyButton text={section.content} />
+                                      </div>
+                                      <p className="text-xs leading-relaxed text-foreground/80 whitespace-pre-wrap">{section.content}</p>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <>
+                                    <div className="flex justify-end px-4 py-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => copyPrompt(i)}
+                                        className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[oklch(0.72_0.12_260)] transition-colors hover:bg-[oklch(0.3_0.08_270_/_0.4)]"
+                                      >
+                                        {ps.copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+                                        {ps.copied ? "コピー済み" : "コピー"}
+                                      </button>
+                                    </div>
+                                    <pre className="whitespace-pre-wrap px-4 pb-3 text-xs leading-relaxed text-foreground/80 font-sans max-h-64 overflow-y-auto">
+                                      {ps.videoPrompt}
+                                    </pre>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                            {/* 台本ベースの動画プロンプト表示（シーン分割 or 全体） */}
                             {ps.scriptVideoPrompt && (
                               <div className="border-t border-[oklch(0.5_0.1_270_/_0.15)] mx-0">
-                                <div className="flex items-center justify-between px-4 py-2 bg-[oklch(0.12_0.04_300_/_0.5)]">
-                                  <span className="text-xs font-semibold text-[oklch(0.65_0.1_300)]">台本ベース 動画プロンプト（Kling AI用）</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(ps.scriptVideoPrompt!).then(() => {
-                                        setPromptStates((prev) => ({ ...prev, [i]: { ...getPromptState(i), copied: true } }))
-                                        setTimeout(() => setPromptStates((prev) => ({ ...prev, [i]: { ...getPromptState(i), copied: false } })), 2000)
-                                      })
-                                    }}
-                                    className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[oklch(0.72_0.12_300)] transition-colors hover:bg-[oklch(0.3_0.08_300_/_0.4)]"
-                                  >
-                                    {ps.copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
-                                    {ps.copied ? "コピー済み" : "コピー"}
-                                  </button>
+                                <div className="px-4 py-2 bg-[oklch(0.12_0.04_300_/_0.5)]">
+                                  <span className="text-xs font-semibold text-[oklch(0.65_0.1_300)]">
+                                    {scriptVideoSections ? "台本ベース 動画プロンプト（シーン別）" : "台本ベース 動画プロンプト（Kling AI用）"}
+                                  </span>
                                 </div>
-                                <pre className="whitespace-pre-wrap px-4 py-3 text-xs leading-relaxed text-foreground/80 font-sans max-h-64 overflow-y-auto">
-                                  {ps.scriptVideoPrompt}
-                                </pre>
+                                {scriptVideoSections ? (
+                                  scriptVideoSections.map((section, si) => (
+                                    <div key={si} className="border-t border-[oklch(0.5_0.1_270_/_0.15)] px-4 py-3">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs font-semibold text-[oklch(0.78_0.12_300)]">{section.title}</span>
+                                        <SceneCopyButton text={section.content} className="text-[oklch(0.72_0.12_300)] hover:bg-[oklch(0.3_0.08_300_/_0.4)]" />
+                                      </div>
+                                      <p className="text-xs leading-relaxed text-foreground/80 whitespace-pre-wrap">{section.content}</p>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <>
+                                    <div className="flex justify-end px-4 py-1">
+                                      <SceneCopyButton text={ps.scriptVideoPrompt} className="text-[oklch(0.72_0.12_300)] hover:bg-[oklch(0.3_0.08_300_/_0.4)]" />
+                                    </div>
+                                    <pre className="whitespace-pre-wrap px-4 pb-3 text-xs leading-relaxed text-foreground/80 font-sans max-h-64 overflow-y-auto">
+                                      {ps.scriptVideoPrompt}
+                                    </pre>
+                                  </>
+                                )}
                               </div>
                             )}
                           </div>
@@ -982,6 +1023,51 @@ export function ResultsScreen({
         onUpgrade={handleUpgrade}
       />
     </main>
+  )
+}
+
+function parseVideoPromptSections(prompt: string): Array<{ title: string; content: string }> | null {
+  if (!prompt.includes("🎬")) return null
+  const lines = prompt.split("\n")
+  const sections: Array<{ title: string; content: string }> = []
+  let currentTitle = ""
+  let currentLines: string[] = []
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (trimmed.startsWith("🎬") || trimmed.startsWith("🔗")) {
+      if (currentTitle) sections.push({ title: currentTitle, content: currentLines.join("\n").trim() })
+      currentTitle = trimmed
+      currentLines = []
+    } else if (trimmed === "---") {
+      // skip separators
+    } else if (currentTitle) {
+      currentLines.push(line)
+    }
+  }
+  if (currentTitle) sections.push({ title: currentTitle, content: currentLines.join("\n").trim() })
+  const filled = sections.filter((s) => s.content)
+  return filled.length > 0 ? filled : null
+}
+
+function SceneCopyButton({ text, className }: { text: string; className?: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        navigator.clipboard.writeText(text).then(() => {
+          setCopied(true)
+          setTimeout(() => setCopied(false), 2000)
+        })
+      }}
+      className={cn(
+        "flex items-center gap-1 rounded-md px-2 py-1 text-xs transition-colors",
+        className ?? "text-[oklch(0.72_0.12_260)] hover:bg-[oklch(0.3_0.08_270_/_0.4)]"
+      )}
+    >
+      {copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? "コピー済み" : "コピー"}
+    </button>
   )
 }
 
