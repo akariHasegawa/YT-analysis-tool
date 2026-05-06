@@ -912,9 +912,17 @@ export function ResultsScreen({
                                     {ps.copied ? "コピー済み" : "コピー"}
                                   </button>
                                 </div>
-                                <pre className="whitespace-pre-wrap px-4 py-3 text-xs leading-relaxed text-foreground/80 font-sans max-h-64 overflow-y-auto">
-                                  {ps.scriptPrompt}
-                                </pre>
+                                <textarea
+                                  value={ps.scriptPrompt ?? ""}
+                                  onChange={(e) =>
+                                    setPromptStates((prev) => ({
+                                      ...prev,
+                                      [i]: { ...(prev[i] ?? getPromptState(i)), scriptPrompt: e.target.value },
+                                    }))
+                                  }
+                                  className="w-full whitespace-pre-wrap px-4 py-3 text-xs leading-relaxed text-foreground/80 font-sans bg-transparent resize-none focus:outline-none rounded-lg focus:bg-[oklch(0.15_0.04_280_/_0.25)]"
+                                  style={{ minHeight: "8rem", maxHeight: "16rem", overflowY: "auto" }}
+                                />
                                 {/* 台本→動画プロンプト生成ボタン（未生成のみ） */}
                                 {!ps.scriptVideoPrompt && (
                                   <div className="border-t border-[oklch(0.5_0.1_270_/_0.15)] px-4 py-3">
@@ -950,7 +958,21 @@ export function ResultsScreen({
                                         <span className="text-xs font-semibold text-[oklch(0.72_0.12_260)]">{section.title}</span>
                                         <SceneCopyButton text={section.content} />
                                       </div>
-                                      <p className="text-xs leading-relaxed text-foreground/80 whitespace-pre-wrap">{section.content}</p>
+                                      <textarea
+                                        value={section.content}
+                                        onChange={(e) => {
+                                          const newPrompt = videoSections
+                                            .map((s, sIdx) => sIdx === si ? { ...s, content: e.target.value } : s)
+                                            .map((s) => `${s.title}\n${s.content}`)
+                                            .join("\n\n")
+                                          setPromptStates((prev) => ({
+                                            ...prev,
+                                            [i]: { ...(prev[i] ?? getPromptState(i)), videoPrompt: newPrompt },
+                                          }))
+                                        }}
+                                        className="w-full text-xs leading-relaxed text-foreground/80 bg-transparent resize-none focus:outline-none rounded-lg focus:bg-[oklch(0.15_0.04_280_/_0.25)] px-1 py-1"
+                                        style={{ minHeight: "5rem" }}
+                                      />
                                     </div>
                                   ))
                                 ) : (
@@ -965,9 +987,17 @@ export function ResultsScreen({
                                         {ps.copied ? "コピー済み" : "コピー"}
                                       </button>
                                     </div>
-                                    <pre className="whitespace-pre-wrap px-4 pb-3 text-xs leading-relaxed text-foreground/80 font-sans max-h-64 overflow-y-auto">
-                                      {ps.videoPrompt}
-                                    </pre>
+                                    <textarea
+                                      value={ps.videoPrompt}
+                                      onChange={(e) =>
+                                        setPromptStates((prev) => ({
+                                          ...prev,
+                                          [i]: { ...(prev[i] ?? getPromptState(i)), videoPrompt: e.target.value },
+                                        }))
+                                      }
+                                      className="w-full whitespace-pre-wrap px-4 pb-3 text-xs leading-relaxed text-foreground/80 font-sans bg-transparent resize-none focus:outline-none rounded-lg focus:bg-[oklch(0.15_0.04_280_/_0.25)]"
+                                      style={{ minHeight: "8rem", maxHeight: "16rem", overflowY: "auto" }}
+                                    />
                                   </>
                                 )}
                               </div>
@@ -998,7 +1028,21 @@ export function ResultsScreen({
                                         <span className="text-xs font-semibold text-[oklch(0.78_0.12_300)]">{section.title}</span>
                                         <SceneCopyButton text={section.content} className="text-[oklch(0.72_0.12_300)] hover:bg-[oklch(0.3_0.08_300_/_0.4)]" />
                                       </div>
-                                      <p className="text-xs leading-relaxed text-foreground/80 whitespace-pre-wrap">{section.content}</p>
+                                      <textarea
+                                        value={section.content}
+                                        onChange={(e) => {
+                                          const newPrompt = scriptVideoSections
+                                            .map((s, sIdx) => sIdx === si ? { ...s, content: e.target.value } : s)
+                                            .map((s) => `${s.title}\n${s.content}`)
+                                            .join("\n\n")
+                                          setPromptStates((prev) => ({
+                                            ...prev,
+                                            [i]: { ...(prev[i] ?? getPromptState(i)), scriptVideoPrompt: newPrompt },
+                                          }))
+                                        }}
+                                        className="w-full text-xs leading-relaxed text-foreground/80 bg-transparent resize-none focus:outline-none rounded-lg focus:bg-[oklch(0.15_0.04_300_/_0.2)] px-1 py-1"
+                                        style={{ minHeight: "5rem" }}
+                                      />
                                     </div>
                                   ))
                                 ) : (
@@ -1006,9 +1050,17 @@ export function ResultsScreen({
                                     <div className="flex justify-end px-4 py-1">
                                       <SceneCopyButton text={ps.scriptVideoPrompt} className="text-[oklch(0.72_0.12_300)] hover:bg-[oklch(0.3_0.08_300_/_0.4)]" />
                                     </div>
-                                    <pre className="whitespace-pre-wrap px-4 pb-3 text-xs leading-relaxed text-foreground/80 font-sans max-h-64 overflow-y-auto">
-                                      {ps.scriptVideoPrompt}
-                                    </pre>
+                                    <textarea
+                                      value={ps.scriptVideoPrompt}
+                                      onChange={(e) =>
+                                        setPromptStates((prev) => ({
+                                          ...prev,
+                                          [i]: { ...(prev[i] ?? getPromptState(i)), scriptVideoPrompt: e.target.value },
+                                        }))
+                                      }
+                                      className="w-full whitespace-pre-wrap px-4 pb-3 text-xs leading-relaxed text-foreground/80 font-sans bg-transparent resize-none focus:outline-none rounded-lg focus:bg-[oklch(0.15_0.04_300_/_0.2)]"
+                                      style={{ minHeight: "8rem", maxHeight: "16rem", overflowY: "auto" }}
+                                    />
                                   </>
                                 )}
                               </div>
