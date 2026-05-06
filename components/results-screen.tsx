@@ -1007,9 +1007,9 @@ export function ResultsScreen({
                               <div className="border-t border-[oklch(0.5_0.1_270_/_0.15)] px-4 py-3 bg-[oklch(0.11_0.03_270_/_0.4)]">
                                 <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[oklch(0.55_0.08_270)]">💡 精度アップのTips</p>
                                 <ul className="space-y-1.5 text-[11px] text-muted-foreground/70 leading-relaxed">
-                                  <li>・Kling AIの <span className="text-[oklch(0.7_0.1_260)]">Image to Video</span> 機能でキャラクターや背景の参照画像をアップロードすると、衣装・外見の再現精度が大幅に上がります</li>
-                                  <li>・各シーン生成後、<span className="text-[oklch(0.7_0.1_260)]">Extend</span> ボタンで「Extend用プロンプト」を使って続きの映像をつなげてください</li>
-                                  <li>・思ったイメージと違う場合は、プロンプトに衣装・色・髪型など外見の詳細を追記すると改善しやすいです</li>
+                                  <li>・<span className="text-[oklch(0.7_0.1_260)]">Image to Video</span> 機能で参照画像をアップロードすると、キャラクターや衣装の再現精度が大幅に上がります</li>
+                                  <li>・各シーン生成後、<span className="text-[oklch(0.7_0.1_260)]">Extend（延長）</span>機能で「Extend用プロンプト」を使って映像をつなげてください</li>
+                                  <li>・思ったイメージと違う場合は、カメラ構図・衣装・色・髪型の詳細をプロンプトに追記すると改善しやすいです</li>
                                 </ul>
                               </div>
                             ) : null}
@@ -1017,9 +1017,7 @@ export function ResultsScreen({
                             {ps.scriptVideoPrompt && (
                               <div className="border-t border-[oklch(0.5_0.1_270_/_0.15)] mx-0">
                                 <div className="px-4 py-2 bg-[oklch(0.12_0.04_300_/_0.5)]">
-                                  <span className="text-xs font-semibold text-[oklch(0.65_0.1_300)]">
-                                    {scriptVideoSections ? "台本ベース 動画プロンプト（シーン別）" : "台本ベース 動画プロンプト（Kling AI用）"}
-                                  </span>
+                                  <span className="text-xs font-semibold text-[oklch(0.65_0.1_300)]">台本ベース 動画プロンプト（シーン別）</span>
                                 </div>
                                 {scriptVideoSections ? (
                                   scriptVideoSections.map((section, si) => (
