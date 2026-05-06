@@ -204,10 +204,20 @@ export function ResultsScreen({
     }
 
   const toggleScriptSettings = (i: number) => {
-    setPromptStates((prev) => ({
-      ...prev,
-      [i]: { ...getPromptState(i), scriptSettingsOpen: !getPromptState(i).scriptSettingsOpen, open: null },
-    }))
+    const state = getPromptState(i)
+    if (state.scriptPrompt) {
+      // 生成済み: 表示トグルのみ（設定は開かない）
+      setPromptStates((prev) => ({
+        ...prev,
+        [i]: { ...(prev[i] ?? getPromptState(i)), open: state.open === "script" ? null : "script", scriptSettingsOpen: false },
+      }))
+    } else {
+      // 未生成: 設定アコーディオンをトグル
+      setPromptStates((prev) => ({
+        ...prev,
+        [i]: { ...(prev[i] ?? getPromptState(i)), scriptSettingsOpen: !state.scriptSettingsOpen, open: null },
+      }))
+    }
   }
 
   const generatePrompt = async (i: number, promptType: "script" | "video") => {
@@ -875,9 +885,25 @@ export function ResultsScreen({
                             {ps.open && ps.open !== "script-video" && activePrompt && (
                               <div className="border-t border-[oklch(0.5_0.1_270_/_0.15)] mx-0">
                                 <div className="flex items-center justify-between px-4 py-2 bg-[oklch(0.12_0.04_280_/_0.5)]">
-                                  <span className="text-xs font-semibold text-[oklch(0.65_0.1_270)]">
-                                    {ps.open === "script" ? "台本プロンプト" : "動画生成プロンプト"}
-                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-semibold text-[oklch(0.65_0.1_270)]">
+                                      {ps.open === "script" ? "台本プロンプト" : "動画生成プロンプト"}
+                                    </span>
+                                    {ps.open === "script" && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setPromptStates((prev) => ({
+                                            ...prev,
+                                            [i]: { ...(prev[i] ?? getPromptState(i)), scriptSettingsOpen: true, open: null, scriptPrompt: null },
+                                          }))
+                                        }
+                                        className="rounded px-1.5 py-0.5 text-[10px] text-muted-foreground/50 transition-colors hover:bg-[oklch(0.3_0.08_270_/_0.4)] hover:text-muted-foreground"
+                                      >
+                                        設定変更・再生成
+                                      </button>
+                                    )}
+                                  </div>
                                   <button
                                     type="button"
                                     onClick={() => copyPrompt(i)}
