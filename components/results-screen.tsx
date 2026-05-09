@@ -177,6 +177,9 @@ export function ResultsScreen({
     captionCopied: boolean
     scriptVideoLoading: boolean
     copyrightNames: boolean
+    customScript: string
+    customScriptVideoLoading: boolean
+    customScriptVideoPrompt: string | null
   }
   const [promptStates, setPromptStates] = useState<Record<number, PromptState>>({})
 
@@ -204,6 +207,9 @@ export function ResultsScreen({
       castCount: "1",
       dialogueStyle: "",
       copyrightNames: true,
+      customScript: "",
+      customScriptVideoLoading: false,
+      customScriptVideoPrompt: null,
     }
 
   const toggleScriptSettings = (i: number) => {
@@ -326,6 +332,42 @@ export function ResultsScreen({
     } catch (e) {
       const msg = e instanceof Error ? e.message : "生成失敗"
       setPromptStates((prev) => ({ ...prev, [i]: { ...(prev[i] ?? getPromptState(i)), scriptVideoLoading: false, error: msg } }))
+    }
+  }
+
+  const generateVideoFromCustomScript = async (i: number) => {
+    if (!analysis) return
+    const state = getPromptState(i)
+    if (!state.customScript.trim()) return
+    setPromptStates((prev) => ({ ...prev, [i]: { ...(prev[i] ?? getPromptState(i)), customScriptVideoLoading: true, customScriptVideoPrompt: null } }))
+    try {
+      const res = await fetch("/api/generate-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idea: analysis.nextVideoIdeas[i],
+          promptType: "video-from-script",
+          script: state.customScript,
+          copyrightNames: state.copyrightNames,
+          dialogueStyle: state.dialogueStyle,
+          context: {
+            channelName,
+            hook: analysis.hook.value,
+            emotion: analysis.emotion.value,
+            subjectType: analysis.subjectType,
+            actionType: analysis.actionType,
+          },
+        }),
+      })
+      const data = (await res.json()) as { prompt?: string; error?: string }
+      if (!res.ok || !data.prompt) throw new Error(data.error ?? "生成失敗")
+      setPromptStates((prev) => ({
+        ...prev,
+        [i]: { ...(prev[i] ?? getPromptState(i)), customScriptVideoLoading: false, customScriptVideoPrompt: data.prompt! },
+      }))
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "生成失敗"
+      setPromptStates((prev) => ({ ...prev, [i]: { ...(prev[i] ?? getPromptState(i)), customScriptVideoLoading: false, error: msg } }))
     }
   }
 
@@ -1044,6 +1086,58 @@ export function ResultsScreen({
                               </div>
                             ) : null}
                             {/* 台本ベースの動画プロンプト表示（シーン分割 or 全体） */}
+                            {/* 自分の台本を貼り付けて動画プロンプト生成 */}
+                            {ps.open === "script" && ps.scriptPrompt && (
+                              <div className="border-t border-[oklch(0.5_0.1_270_/_0.15)] px-4 py-3 bg-[oklch(0.11_0.04_280_/_0.3)]">
+                                <p className="text-xs font-semibold text-[oklch(0.72_0.1_260)] mb-0.5">自分で作った台本から動画プロンプトを生成</p>
+                                <p className="text-[10px] text-muted-foreground/60 mb-2">上のプロンプトをChatGPT等に投げて作った台本を貼り付けてください</p>
+                                <textarea
+                                  rows={4}
+                                  value={ps.customScript}
+                                  onChange={(e) =>
+                                    setPromptStates((prev) => ({
+                                      ...prev,
+                                      [i]: { ...(prev[i] ?? getPromptState(i)), customScript: e.target.value, customScriptVideoPrompt: null },
+                                    }))
+                                  }
+                                  placeholder="ここに台本を貼り付けてください..."
+                                  className="w-full rounded-lg border border-[oklch(0.4_0.08_270_/_0.3)] bg-[oklch(0.15_0.05_270_/_0.5)] px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-[oklch(0.55_0.15_260_/_0.6)] focus:outline-none resize-none"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => generateVideoFromCustomScript(i)}
+                                  disabled={ps.customScriptVideoLoading || !ps.customScript.trim()}
+                                  className={cn(
+                                    "mt-2 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
+                                    "bg-[oklch(0.25_0.08_270_/_0.6)] text-[oklch(0.78_0.12_260)] hover:bg-[oklch(0.35_0.12_260_/_0.7)]",
+                                    (ps.customScriptVideoLoading || !ps.customScript.trim()) && "opacity-60 cursor-not-allowed"
+                                  )}
+                                >
+                                  {ps.customScriptVideoLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Video className="h-3.5 w-3.5" />}
+                                  {ps.customScriptVideoLoading ? "生成中..." : "この台本で動画プロンプトを生成"}
+                                </button>
+                                {/* 生成結果 */}
+                                {ps.customScriptVideoPrompt && (
+                                  <div className="mt-3 rounded-lg border border-[oklch(0.4_0.08_300_/_0.3)] bg-[oklch(0.13_0.04_300_/_0.3)] overflow-hidden">
+                                    <div className="flex items-center justify-between px-3 py-1.5 bg-[oklch(0.12_0.04_300_/_0.5)]">
+                                      <span className="text-xs font-semibold text-[oklch(0.65_0.1_300)]">動画プロンプト（自分の台本ベース）</span>
+                                      <SceneCopyButton text={ps.customScriptVideoPrompt} className="text-[oklch(0.72_0.12_300)] hover:bg-[oklch(0.3_0.08_300_/_0.4)]" />
+                                    </div>
+                                    <textarea
+                                      value={ps.customScriptVideoPrompt}
+                                      onChange={(e) =>
+                                        setPromptStates((prev) => ({
+                                          ...prev,
+                                          [i]: { ...(prev[i] ?? getPromptState(i)), customScriptVideoPrompt: e.target.value },
+                                        }))
+                                      }
+                                      className="w-full whitespace-pre-wrap px-3 py-2 text-xs leading-relaxed text-foreground/80 font-sans bg-transparent resize-none focus:outline-none"
+                                      style={{ minHeight: "6rem", maxHeight: "14rem", overflowY: "auto" }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            )}
                             {ps.scriptVideoPrompt && (
                               <div className="border-t border-[oklch(0.5_0.1_270_/_0.15)] mx-0">
                                 <div className="px-4 py-2 bg-[oklch(0.12_0.04_300_/_0.5)]">
