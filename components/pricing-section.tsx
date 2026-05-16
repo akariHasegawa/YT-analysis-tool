@@ -55,8 +55,9 @@ export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: Pri
               PRO
             </div>
             <div className="mb-6">
-              <div className="text-3xl font-bold text-white">¥3,980<span className="text-lg font-normal text-gray-400"> / 月</span></div>
-              <div className="text-sm text-gray-400">月30回まで分析可能</div>
+              <div className="text-3xl font-bold text-white">¥3,980<span className="text-lg font-normal text-gray-400"> / 初月</span></div>
+              <div className="text-sm text-[#a78bfa] font-semibold">2ヶ月目以降 ¥5,980 / 月</div>
+              <div className="text-sm text-gray-400 mt-1">月30回まで分析可能</div>
             </div>
 
             {/* Features */}
@@ -84,8 +85,9 @@ export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: Pri
               BUSINESS
             </div>
             <div className="mb-6">
-              <div className="text-3xl font-bold text-white">¥14,800<span className="text-lg font-normal text-gray-400"> / 月</span></div>
-              <div className="text-sm text-gray-400">月100回分析可能</div>
+              <div className="text-3xl font-bold text-white">¥14,800<span className="text-lg font-normal text-gray-400"> / 初月</span></div>
+              <div className="text-sm text-[#f59e0b] font-semibold">2ヶ月目以降 ¥19,800 / 月</div>
+              <div className="text-sm text-gray-400 mt-1">月100回分析可能</div>
               <div className="mt-1 text-xs text-gray-400">※最大5本の同時分析も1回としてカウント</div>
             </div>
 
