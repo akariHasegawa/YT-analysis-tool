@@ -51,25 +51,32 @@ export async function POST(req: NextRequest) {
     ? process.env.STRIPE_COUPON_PRO_FIRST_MONTH?.trim()
     : process.env.STRIPE_COUPON_BUSINESS_FIRST_MONTH?.trim()
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    line_items: [{ price, quantity: 1 }],
-    success_url: `${appBase}/dashboard?checkout=success`,
-    cancel_url: `${appBase}/?checkout=cancelled`,
-    client_reference_id: authUserId,
-    customer_email: authEmail ?? undefined,
-    discounts: couponId ? [{ coupon: couponId }] : [],
-    metadata: {
-      user_id: authUserId,
-      plan: billingPlan,
-    },
-    subscription_data: {
+  let session: Awaited<ReturnType<typeof stripe.checkout.sessions.create>>
+  try {
+    session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price, quantity: 1 }],
+      success_url: `${appBase}/dashboard?checkout=success`,
+      cancel_url: `${appBase}/?checkout=cancelled`,
+      client_reference_id: authUserId,
+      customer_email: authEmail ?? undefined,
+      ...(couponId ? { discounts: [{ coupon: couponId }] } : {}),
       metadata: {
         user_id: authUserId,
         plan: billingPlan,
       },
-    },
-  })
+      subscription_data: {
+        metadata: {
+          user_id: authUserId,
+          plan: billingPlan,
+        },
+      },
+    })
+  } catch (e) {
+    console.error("[stripe/checkout] session create error:", e)
+    const message = e instanceof Error ? e.message : "Stripeセッションの作成に失敗しました"
+    return NextResponse.json({ error: "STRIPE_ERROR", message }, { status: 500 })
+  }
 
   if (!session.url) {
     return NextResponse.json({ error: "CHECKOUT_URL_NOT_AVAILABLE" }, { status: 500 })
