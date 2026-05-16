@@ -182,6 +182,7 @@ export default function Home() {
     async (plan: PaidPlan) => {
       if (!isAuthenticated || !session?.access_token) {
         setPendingCheckoutPlan(plan)
+        sessionStorage.setItem("pendingCheckoutPlan", plan)
         setShowSignupModal(true)
         return
       }
@@ -360,6 +361,15 @@ export default function Home() {
     setShowSignupModal(false)
     await refreshSession()
   }, [refreshSession])
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+    const stored = sessionStorage.getItem("pendingCheckoutPlan") as PaidPlan | null
+    if (stored) {
+      sessionStorage.removeItem("pendingCheckoutPlan")
+      setPendingCheckoutPlan(stored)
+    }
+  }, [isAuthenticated])
 
   useEffect(() => {
     if (!pendingCheckoutPlan) return
