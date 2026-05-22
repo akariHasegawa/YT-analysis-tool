@@ -11,16 +11,17 @@ export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: Pri
   return (
     <section id="pricing" className="flex flex-col items-center justify-center px-4 py-16 sm:py-24">
       {/* Header */}
-      <div className="mb-6 text-center">
+      <div className="mb-10 text-center">
         <div className="mb-2 text-xs font-bold uppercase tracking-wider text-[#6366f1]">PRICING</div>
         <h2 className="font-display text-3xl font-bold text-white sm:text-4xl">シンプルな料金プラン</h2>
         <p className="mt-3 text-sm text-gray-400 sm:text-base">
-          サブスクリプションでいつでもキャンセル可能。
+          初月限定価格でスタート。いつでもキャンセル可能。
         </p>
       </div>
 
-      {/* Pricing Cards Container */}
-      <div className="relative w-full max-w-4xl">
+      {/* AIAI-short 単体プラン */}
+      <div className="mb-4 text-xs font-bold uppercase tracking-wider text-gray-500">AIAI-short 単体プラン</div>
+      <div className="relative w-full max-w-4xl mb-16">
         <div className="flex gap-6 overflow-x-auto pb-2 sm:justify-center sm:overflow-x-visible sm:pb-0">
 
           {/* CREATOR Card */}
@@ -29,11 +30,11 @@ export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: Pri
               クリエイター
             </div>
             <div className="mb-6">
-              <div className="text-3xl font-bold text-white">¥5,980<span className="text-lg font-normal text-gray-400"> / 月</span></div>
+              <div className="text-3xl font-bold text-white">¥3,980<span className="text-lg font-normal text-gray-400"> / 初月</span></div>
+              <div className="text-sm text-[#a78bfa] font-semibold">2ヶ月目以降 ¥5,980 / 月</div>
               <div className="text-sm text-gray-400 mt-1">月30回まで分析可能</div>
             </div>
 
-            {/* Features */}
             <div className="mb-8 space-y-2">
               <FeatureItem text="バズ分析" />
               <FeatureItem text="バズり動画 vs 自分の動画の比較分析" />
@@ -58,12 +59,12 @@ export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: Pri
               BUSINESS
             </div>
             <div className="mb-6">
-              <div className="text-3xl font-bold text-white">¥19,800<span className="text-lg font-normal text-gray-400"> / 月</span></div>
+              <div className="text-3xl font-bold text-white">¥14,800<span className="text-lg font-normal text-gray-400"> / 初月</span></div>
+              <div className="text-sm text-[#f59e0b] font-semibold">2ヶ月目以降 ¥19,800 / 月</div>
               <div className="text-sm text-gray-400 mt-1">月100回分析可能</div>
               <div className="mt-1 text-xs text-gray-400">※最大5本の同時分析も1回としてカウント</div>
             </div>
 
-            {/* Features */}
             <div className="mb-8 space-y-3 text-sm text-gray-300">
               <div className="rounded-lg bg-[rgba(99,102,241,0.1)] p-3">
                 <div className="font-semibold text-white">クリエイター全機能含む</div>
@@ -89,14 +90,73 @@ export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: Pri
           </div>
         </div>
       </div>
+
+      {/* AutoVid セット割 */}
+      <div className="mb-4 text-xs font-bold uppercase tracking-wider text-[#10b981]">AutoVid とのセット割</div>
+      <div className="w-full max-w-4xl">
+        <div className="mb-6 rounded-2xl border border-[#10b981] bg-gradient-to-br from-[#0f1117] to-[#0a2a1f] p-6 text-center">
+          <p className="text-sm text-gray-300">
+            AI動画生成ツール <span className="font-semibold text-[#10b981]">AutoVid</span> と一緒に使うと、
+            <span className="font-semibold text-white"> AIAI-short Pro機能がセットで使えます。</span>
+          </p>
+        </div>
+        <div className="flex gap-6 overflow-x-auto pb-2 sm:justify-center sm:overflow-x-visible sm:pb-0">
+
+          {/* AutoVid クリエイター */}
+          <div className="w-[80vw] max-w-sm flex-shrink-0 rounded-2xl border border-[#10b981] bg-[#0f1117] p-8 sm:w-full">
+            <div className="mb-4 flex items-center gap-2">
+              <span className="inline-block rounded-lg bg-[#10b981] px-3 py-1 text-xs font-bold text-black">クリエイター</span>
+              <span className="text-xs text-[#10b981]">セット割</span>
+            </div>
+            <div className="mb-6">
+              <div className="text-3xl font-bold text-white">¥7,980<span className="text-lg font-normal text-gray-400"> / 月</span></div>
+            </div>
+            <div className="mb-8 space-y-2">
+              <FeatureItem text="AutoVid ライト機能すべて" color="green" />
+              <FeatureItem text="AIAI-short クリエイター同梱" color="green" />
+            </div>
+            <a
+              href="https://story-maker-iota-five.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full rounded-lg border border-[#10b981] px-4 py-2 text-center font-semibold text-[#10b981] transition-all hover:bg-[#10b981] hover:text-black"
+            >
+              AutoVidで始める
+            </a>
+          </div>
+
+          {/* AutoVid ビジネス */}
+          <div className="w-[80vw] max-w-sm flex-shrink-0 rounded-2xl border border-[#10b981] bg-[#0f1117] p-8 sm:w-full">
+            <div className="mb-4 flex items-center gap-2">
+              <span className="inline-block rounded-lg bg-[#10b981] px-3 py-1 text-xs font-bold text-black">ビジネス</span>
+              <span className="text-xs text-[#10b981]">セット割</span>
+            </div>
+            <div className="mb-6">
+              <div className="text-3xl font-bold text-white">¥11,800<span className="text-lg font-normal text-gray-400"> / 月</span></div>
+            </div>
+            <div className="mb-8 space-y-2">
+              <FeatureItem text="AutoVid スタンダード機能すべて" color="green" />
+              <FeatureItem text="AIAI-short クリエイター同梱" color="green" />
+            </div>
+            <a
+              href="https://story-maker-iota-five.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full rounded-lg border border-[#10b981] px-4 py-2 text-center font-semibold text-[#10b981] transition-all hover:bg-[#10b981] hover:text-black"
+            >
+              AutoVidで始める
+            </a>
+          </div>
+        </div>
+      </div>
     </section>
   )
 }
 
-function FeatureItem({ text }: { text: string }) {
+function FeatureItem({ text, color = "indigo" }: { text: string; color?: "indigo" | "green" }) {
   return (
     <div className="flex items-start gap-3">
-      <Check className="h-5 w-5 flex-shrink-0 text-[#6366f1] mt-0.5" />
+      <Check className={`h-5 w-5 flex-shrink-0 mt-0.5 ${color === "green" ? "text-[#10b981]" : "text-[#6366f1]"}`} />
       <span className="text-sm text-gray-300">{text}</span>
     </div>
   )

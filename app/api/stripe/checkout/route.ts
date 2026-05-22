@@ -47,6 +47,10 @@ export async function POST(req: NextRequest) {
   const billingPlan = plan as BillingPlan
   const price = getPriceIdForPlan(billingPlan)
 
+  const couponId = billingPlan === "creator"
+    ? process.env.STRIPE_COUPON_PRO_FIRST_MONTH?.trim()
+    : process.env.STRIPE_COUPON_BUSINESS_FIRST_MONTH?.trim()
+
   let session: Awaited<ReturnType<typeof stripe.checkout.sessions.create>>
   try {
     session = await stripe.checkout.sessions.create({
@@ -56,6 +60,7 @@ export async function POST(req: NextRequest) {
       cancel_url: `${appBase}/?checkout=cancelled`,
       client_reference_id: authUserId,
       customer_email: authEmail ?? undefined,
+      ...(couponId ? { discounts: [{ coupon: couponId }] } : {}),
       metadata: {
         user_id: authUserId,
         plan: billingPlan,
