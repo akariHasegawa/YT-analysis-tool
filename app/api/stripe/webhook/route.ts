@@ -22,22 +22,35 @@ async function upsertAutovidSubscription(params: {
 }) {
   const admin = createSupabaseAdmin()
   const billingPlan = billingPlanFromPriceId(params.priceId) ?? params.priceId
-  const { error } = await admin.from("autovid_subscriptions").upsert(
-    {
-      user_id: params.userId,
-      stripe_subscription_id: params.subscriptionId,
-      price_id: params.priceId,
-      plan_name: billingPlan,
-      status: params.status,
-      current_period_end: params.currentPeriodEnd
-        ? new Date(params.currentPeriodEnd * 1000).toISOString()
-        : null,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id" }
-  )
-  if (error) {
-    console.error("[stripe/webhook] upsert autovid_subscriptions failed", params.userId, error)
+  const payload = {
+    stripe_subscription_id: params.subscriptionId,
+    price_id: params.priceId,
+    plan_name: billingPlan,
+    status: params.status,
+    current_period_end: params.currentPeriodEnd
+      ? new Date(params.currentPeriodEnd * 1000).toISOString()
+      : null,
+    updated_at: new Date().toISOString(),
+  }
+
+  // Try update first, then insert if no row exists
+  const { data: existing } = await admin
+    .from("autovid_subscriptions")
+    .select("id")
+    .eq("user_id", params.userId)
+    .maybeSingle()
+
+  if (existing) {
+    const { error } = await admin
+      .from("autovid_subscriptions")
+      .update(payload)
+      .eq("user_id", params.userId)
+    if (error) console.error("[stripe/webhook] update autovid_subscriptions failed", params.userId, error)
+  } else {
+    const { error } = await admin
+      .from("autovid_subscriptions")
+      .insert({ user_id: params.userId, ...payload })
+    if (error) console.error("[stripe/webhook] insert autovid_subscriptions failed", params.userId, error)
   }
 }
 
