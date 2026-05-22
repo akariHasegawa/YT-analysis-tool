@@ -1,7 +1,7 @@
-﻿import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import type Stripe from "stripe"
 import { createSupabaseAdmin } from "@/lib/supabase"
-import { getStripe, getStripeWebhookSecret, planFromPriceId } from "@/lib/stripe"
+import { getStripe, getStripeWebhookSecret, planFromPriceId, billingPlanFromPriceId } from "@/lib/stripe"
 
 export const runtime = "nodejs"
 
@@ -10,7 +10,45 @@ async function updateUserPlan(userId: string, plan: "free" | "pro" | "business")
   const { error } = await admin.from("users").update({ plan }).eq("id", userId)
   if (error) {
     console.error("[stripe/webhook] update users.plan failed", userId, plan, error)
-    throw new Error(`DB update failed: ${error.message}`)
+  }
+}
+
+async function upsertAutovidSubscription(params: {
+  userId: string
+  subscriptionId: string
+  priceId: string
+  status: string
+  currentPeriodEnd: number | null
+}) {
+  const admin = createSupabaseAdmin()
+  const billingPlan = billingPlanFromPriceId(params.priceId) ?? params.priceId
+  const { error } = await admin.from("autovid_subscriptions").upsert(
+    {
+      user_id: params.userId,
+      stripe_subscription_id: params.subscriptionId,
+      price_id: params.priceId,
+      plan_name: billingPlan,
+      status: params.status,
+      current_period_end: params.currentPeriodEnd
+        ? new Date(params.currentPeriodEnd * 1000).toISOString()
+        : null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" }
+  )
+  if (error) {
+    console.error("[stripe/webhook] upsert autovid_subscriptions failed", params.userId, error)
+  }
+}
+
+async function deleteAutovidSubscription(userId: string) {
+  const admin = createSupabaseAdmin()
+  const { error } = await admin
+    .from("autovid_subscriptions")
+    .delete()
+    .eq("user_id", userId)
+  if (error) {
+    console.error("[stripe/webhook] delete autovid_subscriptions failed", userId, error)
   }
 }
 
@@ -27,20 +65,20 @@ async function extractUserIdFromSubscription(
   try {
     const customer = await stripe.customers.retrieve(customerId)
     if (customer.deleted) return null
-    return customer.metadata?.user_id?.trim() || null
+    return (customer as Stripe.Customer).metadata?.user_id?.trim() || null
   } catch (e) {
     console.error("[stripe/webhook] retrieve customer failed", e)
     return null
   }
 }
 
+function getPriceIdFromSubscription(subscription: Stripe.Subscription): string | null {
+  return subscription.items?.data?.[0]?.price?.id ?? null
+}
+
 function planFromSubscriptionItems(subscription: Stripe.Subscription): "pro" | "business" | null {
-  const items = subscription.items?.data ?? []
-  for (const item of items) {
-    const p = planFromPriceId(item.price?.id)
-    if (p) return p
-  }
-  return null
+  const priceId = getPriceIdFromSubscription(subscription)
+  return planFromPriceId(priceId)
 }
 
 export async function POST(req: NextRequest) {
@@ -64,12 +102,46 @@ export async function POST(req: NextRequest) {
 
   try {
     switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session
+        const userId = session.metadata?.user_id?.trim() || session.client_reference_id?.trim()
+        const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id
+        if (userId && subscriptionId) {
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+          const priceId = getPriceIdFromSubscription(subscription)
+          const internalPlan = planFromPriceId(priceId)
+          if (priceId) {
+            await upsertAutovidSubscription({
+              userId,
+              subscriptionId,
+              priceId,
+              status: subscription.status,
+              currentPeriodEnd: subscription.current_period_end ?? null,
+            })
+          }
+          if (internalPlan) {
+            await updateUserPlan(userId, internalPlan)
+          }
+        }
+        break
+      }
+
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription
         const userId = await extractUserIdFromSubscription(stripe, subscription)
         if (userId) {
+          const priceId = getPriceIdFromSubscription(subscription)
           const isActive = subscription.status === "active" || subscription.status === "trialing"
+          if (priceId) {
+            await upsertAutovidSubscription({
+              userId,
+              subscriptionId: subscription.id,
+              priceId,
+              status: subscription.status,
+              currentPeriodEnd: subscription.current_period_end ?? null,
+            })
+          }
           if (isActive) {
             const plan = planFromSubscriptionItems(subscription)
             if (plan) await updateUserPlan(userId, plan)
@@ -83,11 +155,21 @@ export async function POST(req: NextRequest) {
       case "invoice.paid": {
         const invoice = event.data.object as Stripe.Invoice
         const subscriptionId =
-          typeof invoice.subscription === "string" ? invoice.subscription : invoice.subscription?.id
+          typeof invoice.subscription === "string" ? invoice.subscription : (invoice.subscription as Stripe.Subscription)?.id
         if (subscriptionId) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId)
           const userId = await extractUserIdFromSubscription(stripe, subscription)
           if (userId) {
+            const priceId = getPriceIdFromSubscription(subscription)
+            if (priceId) {
+              await upsertAutovidSubscription({
+                userId,
+                subscriptionId: subscription.id,
+                priceId,
+                status: subscription.status,
+                currentPeriodEnd: subscription.current_period_end ?? null,
+              })
+            }
             const plan = planFromSubscriptionItems(subscription)
             if (plan) await updateUserPlan(userId, plan)
           }
@@ -99,6 +181,7 @@ export async function POST(req: NextRequest) {
         const subscription = event.data.object as Stripe.Subscription
         const userId = await extractUserIdFromSubscription(stripe, subscription)
         if (userId) {
+          await deleteAutovidSubscription(userId)
           await updateUserPlan(userId, "free")
         }
         break

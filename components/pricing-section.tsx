@@ -4,7 +4,7 @@ import { Check } from 'lucide-react'
 
 interface PricingProps {
   onPlanSelect: (plan: string) => void | Promise<void>
-  checkoutLoadingPlan?: "pro" | "business" | null
+  checkoutLoadingPlan?: "creator" | "business" | null
 }
 
 export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: PricingProps) {
@@ -15,48 +15,21 @@ export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: Pri
         <div className="mb-2 text-xs font-bold uppercase tracking-wider text-[#6366f1]">PRICING</div>
         <h2 className="font-display text-3xl font-bold text-white sm:text-4xl">シンプルな料金プラン</h2>
         <p className="mt-3 text-sm text-gray-400 sm:text-base">
-          まず無料で試して、必要になったらアップグレード。
+          サブスクリプションでいつでもキャンセル可能。
         </p>
       </div>
 
       {/* Pricing Cards Container */}
-      <div className="relative w-full max-w-6xl">
-        {/* PC: centered flex / Mobile: horizontal scroll */}
+      <div className="relative w-full max-w-4xl">
         <div className="flex gap-6 overflow-x-auto pb-2 sm:justify-center sm:overflow-x-visible sm:pb-0">
 
-          {/* FREE Card */}
-          <div className="w-[80vw] max-w-sm flex-shrink-0 rounded-2xl border border-gray-600 bg-[#0f1117] p-8 sm:w-full">
-            <div className="mb-4 inline-block rounded-lg bg-gray-700 px-3 py-1 text-xs font-bold text-gray-200">
-              FREE
-            </div>
-            <div className="mb-6">
-              <div className="text-3xl font-bold text-white">¥0</div>
-              <div className="text-sm text-gray-400">初回1回限り</div>
-            </div>
-
-            {/* Features */}
-            <div className="mb-8 space-y-3">
-              <FeatureItem text="バズ分析 or バズりたい（1回）" />
-              <FeatureItem text="AI構造分析" />
-              <FeatureItem text="サムネ評価" />
-            </div>
-
-            <button
-              onClick={() => onPlanSelect('free')}
-              className="w-full rounded-lg border border-gray-600 px-4 py-2 font-semibold text-gray-300 transition-colors hover:bg-gray-900"
-            >
-              無料で試す
-            </button>
-          </div>
-
-          {/* PRO Card */}
+          {/* CREATOR Card */}
           <div className="w-[80vw] max-w-sm flex-shrink-0 rounded-2xl border-2 border-[#6366f1] bg-gradient-to-br from-[#0f1117] to-[#1e1a4f] p-8 sm:w-full">
             <div className="mb-4 inline-block rounded-lg bg-[#6366f1] px-3 py-1 text-xs font-bold text-white">
-              PRO
+              クリエイター
             </div>
             <div className="mb-6">
-              <div className="text-3xl font-bold text-white">¥3,980<span className="text-lg font-normal text-gray-400"> / 初月</span></div>
-              <div className="text-sm text-[#a78bfa] font-semibold">2ヶ月目以降 ¥5,980 / 月</div>
+              <div className="text-3xl font-bold text-white">¥5,980<span className="text-lg font-normal text-gray-400"> / 月</span></div>
               <div className="text-sm text-gray-400 mt-1">月30回まで分析可能</div>
             </div>
 
@@ -71,11 +44,11 @@ export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: Pri
             </div>
 
             <button
-              onClick={() => onPlanSelect('pro')}
+              onClick={() => onPlanSelect('creator')}
               disabled={checkoutLoadingPlan != null}
-              className="w-full rounded-lg bg-gradient-to-r from-[#a78bfa] to-[#4c1d95] px-4 py-2 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[rgba(99,102,241,0.4)]"
+              className="w-full rounded-lg bg-gradient-to-r from-[#a78bfa] to-[#4c1d95] px-4 py-2 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[rgba(99,102,241,0.4)] disabled:opacity-60"
             >
-              {checkoutLoadingPlan === "pro" ? "チェックアウトへ接続中..." : "Proを始める"}
+              {checkoutLoadingPlan === "creator" ? "チェックアウトへ接続中..." : "クリエイタープランを始める"}
             </button>
           </div>
 
@@ -85,8 +58,7 @@ export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: Pri
               BUSINESS
             </div>
             <div className="mb-6">
-              <div className="text-3xl font-bold text-white">¥14,800<span className="text-lg font-normal text-gray-400"> / 初月</span></div>
-              <div className="text-sm text-[#f59e0b] font-semibold">2ヶ月目以降 ¥19,800 / 月</div>
+              <div className="text-3xl font-bold text-white">¥19,800<span className="text-lg font-normal text-gray-400"> / 月</span></div>
               <div className="text-sm text-gray-400 mt-1">月100回分析可能</div>
               <div className="mt-1 text-xs text-gray-400">※最大5本の同時分析も1回としてカウント</div>
             </div>
@@ -94,7 +66,7 @@ export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: Pri
             {/* Features */}
             <div className="mb-8 space-y-3 text-sm text-gray-300">
               <div className="rounded-lg bg-[rgba(99,102,241,0.1)] p-3">
-                <div className="font-semibold text-white">Pro全機能含む</div>
+                <div className="font-semibold text-white">クリエイター全機能含む</div>
                 <div className="text-xs text-gray-400 mt-1">バズ分析・比較分析・プロンプト生成など全て利用可能。</div>
               </div>
               <div className="rounded-lg bg-[rgba(99,102,241,0.1)] p-3">
@@ -110,7 +82,7 @@ export function PricingSection({ onPlanSelect, checkoutLoadingPlan = null }: Pri
             <button
               onClick={() => onPlanSelect('business')}
               disabled={checkoutLoadingPlan != null}
-              className="w-full rounded-lg bg-gradient-to-r from-[#f59e0b] to-[#ef4444] px-4 py-2 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[rgba(245,158,11,0.4)]"
+              className="w-full rounded-lg bg-gradient-to-r from-[#f59e0b] to-[#ef4444] px-4 py-2 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[rgba(245,158,11,0.4)] disabled:opacity-60"
             >
               {checkoutLoadingPlan === "business" ? "チェックアウトへ接続中..." : "Businessを始める"}
             </button>

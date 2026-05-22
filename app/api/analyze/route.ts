@@ -24,6 +24,7 @@ import { NextRequest, NextResponse } from "next/server"
     parseUnifiedOpenAiAnalysisContent,
   } from "@/lib/unified-analysis-openai"
   import { createSupabaseAdmin, createSupabaseAnon, isSupabaseConfigured } from "@/lib/supabase"
+  import { VALID_PRICE_IDS } from "@/lib/stripe"
   import type { User, SupabaseClient } from "@supabase/supabase-js"
 
   const GUEST_ANALYSIS_COOKIE = "aiai_guest_analysis_count"
@@ -253,6 +254,32 @@ import { NextRequest, NextResponse } from "next/server"
     const isGuest = authUser == null
     const limitDisabled = isAnalysisLimitDisabled()
 
+    // Subscription guard: require active subscription in autovid_subscriptions
+    if (!limitDisabled) {
+      if (isGuest) {
+        return NextResponse.json(
+          { error: "SUBSCRIPTION_REQUIRED", message: "ご利用にはサブスクリプションが必要です" },
+          { status: 402 }
+        )
+      }
+      if (authUser && isSupabaseConfigured() && VALID_PRICE_IDS.length > 0) {
+        const subAdmin = createSupabaseAdmin()
+        const { data: activeSub } = await subAdmin
+          .from("autovid_subscriptions")
+          .select("price_id, status")
+          .eq("user_id", authUser.id)
+          .eq("status", "active")
+          .in("price_id", VALID_PRICE_IDS)
+          .maybeSingle()
+        if (!activeSub) {
+          return NextResponse.json(
+            { error: "SUBSCRIPTION_REQUIRED", message: "有効なサブスクリプションが必要です" },
+            { status: 402 }
+          )
+        }
+      }
+    }
+
     if (!isGuest && authUser) {
       const supabaseGate = assertSupabaseForAnalyze()
       if (!supabaseGate.ok) {
@@ -268,10 +295,6 @@ import { NextRequest, NextResponse } from "next/server"
         if (!limit.ok) {
           return NextResponse.json({ error: "LIMIT_EXCEEDED", plan: limit.plan }, { status: 403 })
         }
-      }
-    } else {
-      if (!limitDisabled && readGuestAnalysisCount(req) >= 1) {
-        return NextResponse.json({ error: "LIMIT_EXCEEDED", plan: "free" }, { status: 403 })
       }
     }
 

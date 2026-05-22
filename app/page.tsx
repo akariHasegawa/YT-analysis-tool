@@ -22,7 +22,7 @@ import { useLanguage } from "@/lib/language-context"
 import { useSupabaseAuth } from "@/components/supabase-auth-provider"
 
 type Screen = "landing" | "mode-selection" | "input" | "processing" | "results" | "multi-input" | "multi-results" | "extension-guide"
-type PaidPlan = "pro" | "business"
+type PaidPlan = "creator" | "business"
 
 export default function Home() {
   const { t } = useLanguage()
@@ -282,7 +282,7 @@ export default function Home() {
         setScreen("mode-selection")
         return
       }
-      if (plan === "pro" || plan === "business") {
+      if (plan === "creator" || plan === "business") {
         await beginStripeCheckout(plan)
       }
     },
@@ -424,6 +424,13 @@ export default function Home() {
         if (!res.ok) {
           setAnalysis(null)
           setReferenceInsights(null)
+          if (data.error === "SUBSCRIPTION_REQUIRED") {
+            setScreen("landing")
+            setTimeout(() => {
+              document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })
+            }, 100)
+            return
+          }
           setAnalysisError(
             typeof data.error === "string" ? data.error : tRef.current("processing.error.analyzeFailed")
           )
