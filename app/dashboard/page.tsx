@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Chrome, ExternalLink } from "lucide-react"
 import { useSupabaseAuth } from "@/components/supabase-auth-provider"
@@ -9,7 +9,7 @@ import { ExtensionInstallModal } from "@/components/extension-install-modal"
 const EXTENSION_URL =
   "https://chromewebstore.google.com/detail/aiai-short-%E5%88%86%E6%9E%90%E3%83%84%E3%83%BC%E3%83%AB/caeiojejmcmbiapdldioggomofdigaij"
 
-export default function DashboardPage() {
+function DashboardContent() {
   const searchParams = useSearchParams()
   const { session, isLoading } = useSupabaseAuth()
   const [showExtensionModal, setShowExtensionModal] = useState(false)
@@ -85,5 +85,13 @@ export default function DashboardPage() {
         </a>
       </main>
     </>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense>
+      <DashboardContent />
+    </Suspense>
   )
 }
